@@ -16,14 +16,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default function BusinessDetailPage({
+export default async function BusinessDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   // Mock data - in production, fetch based on params.id
   const business = {
-    id: params.id,
+    id,
     name: "Tech Startup Inc",
     industry: "Technology",
     description: "Innovative tech solutions for modern businesses",
