@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+# Run ESLint on staged files
+npx lint-staged
+
