@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Filter, Phone } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 const fakeLeads = [
   { id: "1", name: "Alice Johnson", phone: "+123456789", createdAt: "2025-09-20T10:00:00Z" },
@@ -17,7 +16,6 @@ const fakeLeads = [
 
 export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const router = useRouter();
 
   const filteredLeads = fakeLeads.filter(
     (lead) =>
@@ -51,7 +49,7 @@ export default function LeadsPage() {
           {filteredLeads.map((lead) => (
             <div
               key={lead.id}
-              onClick={() => router.push(`/protected/leads/${lead.id}`)}
+              
               className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition"
             >
               <div className="flex items-center gap-3">
