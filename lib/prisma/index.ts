@@ -1,7 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 
-export const prisma = new PrismaClient({
-  log: ["query", "error", "warn"],
-});
+// Extend the NodeJS global type so we can attach `prisma` safely
+declare global {
+   
+  var prisma: PrismaClient | undefined;
+}
 
-if (process.env.NODE_ENV !== "production") (global as any).prisma = prisma;
+export const prisma =
+  global.prisma ??
+  new PrismaClient({
+    log: ["query", "error", "warn"],
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  global.prisma = prisma;
+}
