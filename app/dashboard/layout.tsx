@@ -20,6 +20,7 @@ import {
   Users,
   Settings,
   Zap,
+  LayoutTemplate
 } from "lucide-react";
 import Link from "next/link";
 
@@ -37,6 +38,8 @@ const navigation = [
       { title: "Campaigns", href: "/dashboard/campaigns", icon: Zap },
       { title: "Messages", href: "/dashboard/messages", icon: MessageSquare },
       { title: "Leads", href: "/dashboard/leads", icon: Users },
+     { title: "Templates", href: "/dashboard/templates", icon: LayoutTemplate },
+
     ],
   },
   {
