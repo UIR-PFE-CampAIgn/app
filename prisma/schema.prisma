@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model leads {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider         String
+  provider_user_id String
+  display_name     String?
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  conversations    conversations?
+  @@unique([provider, provider_user_id])
+  @@index([provider, provider_user_id])
+}
+
+model conversations {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id          String     @unique @db.Uuid
+  business_social_media_id    String    @db.Uuid   
+  status           String     @default("open")
+  running_summary  String?
+  last_inbound_at  DateTime?  @db.Timestamptz(6)
+  last_outbound_at DateTime?  @db.Timestamptz(6)
+  message_count    Int        @default(0)
+  created_at       DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime   @default(now()) @db.Timestamptz(6)
+  leads            leads      @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  business_social_media       business_social_media? @relation(fields: [business_social_media_id], references: [id], onDelete: Cascade)
+  messages         messages[]
+
+  @@index([last_inbound_at(sort: Desc)])
+  @@index([updated_at(sort: Desc)])
+}
+
+model messages {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversation_id     String        @db.Uuid
+  direction           String
+  msg_type            String        @default("text")
+  text                String?
+  payload             Json?
+  provider_message_id String?
+  ai_reply            Boolean       @default(false)
+  ai_model            String?
+  ai_confidence        Decimal?      @db.Decimal(4, 3)
+  created_at          DateTime      @default(now()) @db.Timestamptz(6)
+  conversations       conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@index([conversation_id, created_at])
+}
+
+model businesses {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  description       String?
+  industry          String?
+  website           String?
+  email             String?
+  phone             String?
+  address           String?
+  city              String?
+  country           String?
+  timezone          String?                 @default("UTC")
+  logo_url          String?
+  is_active         Boolean                 @default(true)
+  created_at        DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime                @default(now()) @db.Timestamptz(6)
+  social_media_pages business_social_media[]
+  user_id           String                  @db.Uuid
+  user              users                   @relation(fields: [user_id], references: [id])
+
+  @@index([name])
+  @@index([is_active])
+  @@index([created_at(sort: Desc)])
+}
+
+/// Business Social Media Pages model representing social media accounts for businesses
+model business_social_media {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  business_id           String                @db.Uuid
+  platform SocialMediaPlatform @default(WHATSAPP)
+  page_id               String                
+  page_name             String
+  page_username         String?
+  page_url              String?
+  access_token          String?               
+  webhook_url           String?
+  is_verified           Boolean               @default(false)
+  is_active             Boolean               @default(true)
+  last_sync_at          DateTime?             @db.Timestamptz(6)
+  sync_frequency_minutes Int?                 @default(60)
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime              @default(now()) @db.Timestamptz(6)
+  business              businesses            @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  conversations         conversations[]
+  @@unique([business_id, platform, page_id])
+  @@index([business_id])
+  @@index([platform])
+  @@index([is_active])
+  @@index([last_sync_at])
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum MessageDirection {
+  IN
+  OUT
+}
+
+/// Social Media Platforms enum
+enum SocialMediaPlatform {
+  FACEBOOK
+  INSTAGRAM
+  WHATSAPP
+  TWITTER
+  LINKEDIN
+  TIKTOK
+  YOUTUBE
+  TELEGRAM
+  DISCORD
+  SNAPCHAT
+}
+model users {
+  id         String      @id @db.Uuid   // Same as auth.users.id
+  email      String      @unique
+  fullname   String?      
+  photo_url  String?
+  created_at DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at DateTime    @default(now()) @db.Timestamptz(6)
+
+  // Relation to businesses
+  businesses  businesses[]
+}
