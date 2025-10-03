@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -36,65 +37,29 @@ import {
   Calendar,
   Sparkles,
 } from "lucide-react";
-
-type Template = {
-  id: string;
-  name: string;
-  content: string;
-  category: string;
-  language: string;
-  variables: string[];
-  createdAt: string;
-  lastUsed: string | null;
-  usageCount: number;
-};
-
-const initialTemplates: Template[] = [
-  {
-    id: "1",
-    name: "Welcome Message",
-    content: "Hi {{name}}, welcome to our service! We're excited to have you on board. Reply with any questions.",
-    category: "onboarding",
-    language: "EN",
-    variables: ["name"],
-    createdAt: "2025-10-01",
-    lastUsed: "2025-10-03",
-    usageCount: 45,
-  },
-  {
-    id: "2",
-    name: "Order Confirmation",
-    content: "Hello {{name}}, your order #{{orderNumber}} has been confirmed! Expected delivery: {{deliveryDate}}.",
-    category: "transactional",
-    language: "EN",
-    variables: ["name", "orderNumber", "deliveryDate"],
-    createdAt: "2025-09-28",
-    lastUsed: "2025-10-02",
-    usageCount: 128,
-  },
-  {
-    id: "3",
-    name: "Follow-up Reminder",
-    content: "Hey {{name}}, just checking in! Have you had a chance to review our proposal? Let me know if you need anything.",
-    category: "follow-up",
-    language: "EN",
-    variables: ["name"],
-    createdAt: "2025-09-25",
-    lastUsed: null,
-    usageCount: 0,
-  },
-];
+import { useTemplates } from "@/lib/hooks/use-templates";
+import { templateService } from "@/lib/services/template.service";
+import { CreateTemplateDto, MessageTemplate, UpdateTemplateDto } from "@/lib/types/template";
 
 export default function MessageTemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+  const {
+    templates,
+    loading,
+    error,
+    fetchTemplates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    duplicateTemplate,
+  } = useTemplates();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     content: "",
@@ -102,10 +67,13 @@ export default function MessageTemplatesPage() {
     language: "EN",
   });
 
+  // Load templates on mount
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
   const extractVariables = (content: string): string[] => {
-    const regex = /\{\{(\w+)\}\}/g;
-    const matches = content.matchAll(regex);
-    return Array.from(new Set(Array.from(matches, m => m[1])));
+    return templateService.extractVariables(content);
   };
 
   const filteredTemplates = templates.filter((template) => {
@@ -117,61 +85,74 @@ export default function MessageTemplatesPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleCreate = () => {
-    const newTemplate: Template = {
-      id: Date.now().toString(),
-      name: formData.name,
-      content: formData.content,
-      category: formData.category,
-      language: formData.language,
-      variables: extractVariables(formData.content),
-      createdAt: new Date().toISOString().split('T')[0],
-      lastUsed: null,
-      usageCount: 0,
-    };
-    setTemplates([newTemplate, ...templates]);
-    setIsCreateOpen(false);
-    resetForm();
+  const handleCreate = async () => {
+    try {
+      const dto: CreateTemplateDto = {
+        name: formData.name,
+        content: formData.content,
+        category: formData.category as 'onboarding' | 'transactional' | 'follow-up' | 'promotional' | 'general',
+        language: formData.language,
+      };
+      await createTemplate(dto);
+      setIsCreateOpen(false);
+      resetForm();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create template');
+    }
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!selectedTemplate) return;
-    setTemplates(templates.map(t => 
-      t.id === selectedTemplate.id 
-        ? { 
-            ...t, 
-            name: formData.name, 
-            content: formData.content,
-            category: formData.category,
-            language: formData.language,
-            variables: extractVariables(formData.content)
-          }
-        : t
-    ));
-    setIsEditOpen(false);
-    resetForm();
+    try {
+      const dto: UpdateTemplateDto = {
+        name: formData.name,
+        content: formData.content,
+        category: formData.category as 'onboarding' | 'transactional' | 'follow-up' | 'promotional' | 'general',
+        language: formData.language,
+      };
+      await updateTemplate(selectedTemplate.id, dto);
+      setIsEditOpen(false);
+      resetForm();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update template');
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selectedTemplate) return;
-    setTemplates(templates.filter(t => t.id !== selectedTemplate.id));
-    setIsDeleteOpen(false);
-    setSelectedTemplate(null);
+    try {
+      await deleteTemplate(selectedTemplate.id);
+      setIsDeleteOpen(false);
+      setSelectedTemplate(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete template');
+    }
   };
 
-  const handleDuplicate = (template: Template) => {
-    const duplicated: Template = {
-      ...template,
-      id: Date.now().toString(),
-      name: `${template.name} (Copy)`,
-      createdAt: new Date().toISOString().split('T')[0],
-      lastUsed: null,
-      usageCount: 0,
-    };
-    setTemplates([duplicated, ...templates]);
+  const handleDuplicate = async (templateId: string) => {
+    try {
+      await duplicateTemplate(templateId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to duplicate template');
+    }
   };
 
-  const openEditDialog = (template: Template) => {
+  const handleSearch = () => {
+    fetchTemplates({
+      search: searchTerm || undefined,
+      category: categoryFilter !== 'all' ? categoryFilter : undefined,
+    });
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setCategoryFilter(category);
+    fetchTemplates({
+      search: searchTerm || undefined,
+      category: category !== 'all' ? category : undefined,
+    });
+  };
+
+  const openEditDialog = (template: MessageTemplate) => {
     setSelectedTemplate(template);
     setFormData({
       name: template.name,
@@ -182,7 +163,7 @@ export default function MessageTemplatesPage() {
     setIsEditOpen(true);
   };
 
-  const openDeleteDialog = (template: Template) => {
+  const openDeleteDialog = (template: MessageTemplate) => {
     setSelectedTemplate(template);
     setIsDeleteOpen(true);
   };
@@ -207,6 +188,18 @@ export default function MessageTemplatesPage() {
     };
     return colors[category] || colors.general;
   };
+
+  // Loading state
+  if (loading && templates.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100/50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading templates...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100/50 p-6">
@@ -239,10 +232,11 @@ export default function MessageTemplatesPage() {
                 placeholder="Search templates..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="pl-10 bg-white border-slate-200"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={handleCategoryChange}>
               <SelectTrigger className="w-48 bg-white">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -255,8 +249,33 @@ export default function MessageTemplatesPage() {
                 <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>
+            <Button onClick={handleSearch} variant="outline">
+              Search
+            </Button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm">{error}</p>
+            <Button 
+              onClick={() => fetchTemplates()} 
+              variant="outline" 
+              size="sm" 
+              className="mt-2"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* Loading indicator for refetch */}
+        {loading && templates.length > 0 && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+            Updating templates...
+          </div>
+        )}
 
         {/* Templates Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -290,7 +309,7 @@ export default function MessageTemplatesPage() {
                       <span className="text-xs font-medium text-slate-700">Variables:</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {template.variables.map((variable) => (
+                      {template.variables.map((variable: string) => (
                         <Badge key={variable} variant="secondary" className="text-xs font-mono">
                           {`{{${variable}}}`}
                         </Badge>
@@ -303,11 +322,11 @@ export default function MessageTemplatesPage() {
                 <div className="flex items-center justify-between text-xs text-slate-500 mb-4 pt-3 border-t">
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-3.5 w-3.5" />
-                    Used {template.usageCount} times
+                    Used {template.usage_count} times
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
-                    {template.lastUsed ? new Date(template.lastUsed).toLocaleDateString() : 'Never'}
+                    {template.last_used_at ? new Date(template.last_used_at).toLocaleDateString() : 'Never'}
                   </span>
                 </div>
 
@@ -325,7 +344,7 @@ export default function MessageTemplatesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDuplicate(template)}
+                    onClick={() => handleDuplicate(template.id)}
                   >
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
@@ -344,7 +363,7 @@ export default function MessageTemplatesPage() {
         </div>
 
         {/* Empty State */}
-        {filteredTemplates.length === 0 && (
+        {filteredTemplates.length === 0 && !loading && (
           <Card className="border-dashed border-2 bg-white">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <MessageSquare className="h-16 w-16 text-slate-300 mb-4" />
