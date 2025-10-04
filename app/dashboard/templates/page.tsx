@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Card,
   CardContent,
@@ -25,8 +28,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   Plus,
@@ -38,10 +50,24 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useTemplates } from "@/lib/hooks/use-templates";
+import { useTemplateFilters } from "@/lib/hooks/use-template-filters";
+import { useTemplateDialog } from "@/lib/hooks/use-template-dialog";
 import { templateService } from "@/lib/services/template.service";
-import { CreateTemplateDto, MessageTemplate, UpdateTemplateDto } from "@/lib/types/template";
+import { MessageTemplate } from "@/lib/types/template";
+import { ALLOWED_VARIABLE_KEYS, ALLOWED_VARIABLES } from "@/lib/constants/template-variables";
+
+// Zod schema for form validation
+const templateFormSchema = z.object({
+  name: z.string().min(1, "Template name is required").max(100, "Name too long"),
+  content: z.string().min(1, "Content is required").max(5000, "Content too long"),
+  category: z.enum(["onboarding", "transactional", "follow-up", "promotional", "general"]),
+  language: z.string().min(2, "Language is required"),
+});
+
+type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
 export default function MessageTemplatesPage() {
+  const { toast } = useToast();
   const {
     templates,
     loading,
@@ -53,18 +79,35 @@ export default function MessageTemplatesPage() {
     duplicateTemplate,
   } = useTemplates();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
-  
-  const [formData, setFormData] = useState({
-    name: "",
-    content: "",
-    category: "general",
-    language: "EN",
+  // Custom hooks for state management
+  const {
+    searchTerm,
+    categoryFilter,
+    setSearchTerm,
+    setCategoryFilter,
+    filteredTemplates,
+  } = useTemplateFilters(templates);
+
+  const {
+    isCreateOpen,
+    isEditOpen,
+    isDeleteOpen,
+    selectedTemplate,
+    openCreate,
+    openEdit,
+    openDelete,
+    closeDialogs,
+  } = useTemplateDialog();
+
+  // React Hook Form
+  const form = useForm<TemplateFormValues>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues: {
+      name: "",
+      content: "",
+      category: "general",
+      language: "EN",
+    },
   });
 
   // Load templates on mount
@@ -76,45 +119,40 @@ export default function MessageTemplatesPage() {
     return templateService.extractVariables(content);
   };
 
-  const filteredTemplates = templates.filter((template) => {
-    const matchesSearch =
-      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || template.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleCreate = async () => {
+  const handleCreate = async (values: TemplateFormValues) => {
     try {
-      const dto: CreateTemplateDto = {
-        name: formData.name,
-        content: formData.content,
-        category: formData.category as 'onboarding' | 'transactional' | 'follow-up' | 'promotional' | 'general',
-        language: formData.language,
-      };
-      await createTemplate(dto);
-      setIsCreateOpen(false);
-      resetForm();
+      await createTemplate(values);
+      closeDialogs();
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Template created successfully",
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create template');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to create template',
+        variant: "destructive",
+      });
     }
   };
 
-  const handleEdit = async () => {
+  const handleEdit = async (values: TemplateFormValues) => {
     if (!selectedTemplate) return;
     try {
-      const dto: UpdateTemplateDto = {
-        name: formData.name,
-        content: formData.content,
-        category: formData.category as 'onboarding' | 'transactional' | 'follow-up' | 'promotional' | 'general',
-        language: formData.language,
-      };
-      await updateTemplate(selectedTemplate.id, dto);
-      setIsEditOpen(false);
-      resetForm();
+      await updateTemplate(selectedTemplate.id, values);
+      closeDialogs();
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Template updated successfully",
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update template');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to update template',
+        variant: "destructive",
+      });
     }
   };
 
@@ -122,60 +160,63 @@ export default function MessageTemplatesPage() {
     if (!selectedTemplate) return;
     try {
       await deleteTemplate(selectedTemplate.id);
-      setIsDeleteOpen(false);
-      setSelectedTemplate(null);
+      closeDialogs();
+      toast({
+        title: "Success",
+        description: "Template deleted successfully",
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete template');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to delete template',
+        variant: "destructive",
+      });
     }
   };
 
   const handleDuplicate = async (templateId: string) => {
     try {
       await duplicateTemplate(templateId);
+      toast({
+        title: "Success",
+        description: "Template duplicated successfully",
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to duplicate template');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to duplicate template',
+        variant: "destructive",
+      });
     }
   };
 
   const handleSearch = () => {
+    // Validate searchTerm is not empty or whitespace only
+    const trimmedSearch = searchTerm.trim();
+    
     fetchTemplates({
-      search: searchTerm || undefined,
+      search: trimmedSearch || undefined,
       category: categoryFilter !== 'all' ? categoryFilter : undefined,
     });
   };
 
   const handleCategoryChange = (category: string) => {
     setCategoryFilter(category);
+    const trimmedSearch = searchTerm.trim();
     fetchTemplates({
-      search: searchTerm || undefined,
+      search: trimmedSearch || undefined,
       category: category !== 'all' ? category : undefined,
     });
   };
 
-  const openEditDialog = (template: MessageTemplate) => {
-    setSelectedTemplate(template);
-    setFormData({
+  const onOpenEditDialog = (template: MessageTemplate) => {
+    openEdit(template);
+    form.reset({
       name: template.name,
       content: template.content,
       category: template.category,
       language: template.language,
     });
-    setIsEditOpen(true);
-  };
-
-  const openDeleteDialog = (template: MessageTemplate) => {
-    setSelectedTemplate(template);
-    setIsDeleteOpen(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      content: "",
-      category: "general",
-      language: "EN",
-    });
-    setSelectedTemplate(null);
   };
 
   const getCategoryColor = (category: string) => {
@@ -188,6 +229,9 @@ export default function MessageTemplatesPage() {
     };
     return colors[category] || colors.general;
   };
+
+  // Watch content field for variable preview
+  const contentValue = form.watch("content");
 
   // Loading state
   if (loading && templates.length === 0) {
@@ -216,7 +260,7 @@ export default function MessageTemplatesPage() {
               </p>
             </div>
             <Button
-              onClick={() => setIsCreateOpen(true)}
+              onClick={openCreate}
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -267,13 +311,6 @@ export default function MessageTemplatesPage() {
             >
               Retry
             </Button>
-          </div>
-        )}
-
-        {/* Loading indicator for refetch */}
-        {loading && templates.length > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-            Updating templates...
           </div>
         )}
 
@@ -335,7 +372,7 @@ export default function MessageTemplatesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => openEditDialog(template)}
+                    onClick={() => onOpenEditDialog(template)}
                     className="flex-1"
                   >
                     <Edit className="h-3.5 w-3.5 mr-1" />
@@ -351,7 +388,7 @@ export default function MessageTemplatesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => openDeleteDialog(template)}
+                    onClick={() => openDelete(template)}
                     className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -376,7 +413,7 @@ export default function MessageTemplatesPage() {
                   : "Create your first message template to get started"}
               </p>
               {!searchTerm && categoryFilter === "all" && (
-                <Button onClick={() => setIsCreateOpen(true)}>
+                <Button onClick={openCreate}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Template
                 </Button>
@@ -385,216 +422,203 @@ export default function MessageTemplatesPage() {
           </Card>
         )}
 
-        {/* Create Dialog */}
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        {/* Create/Edit Dialog */}
+        <Dialog open={isCreateOpen || isEditOpen} onOpenChange={closeDialogs}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Create Message Template</DialogTitle>
+              <DialogTitle>{isEditOpen ? "Edit" : "Create"} Message Template</DialogTitle>
               <DialogDescription>
-                Create a reusable template with personalized variables
+                {isEditOpen ? "Update your template content and settings" : "Create a reusable template with personalized variables"}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Template Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Welcome Message"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            {/* Available Variables Section */}
+  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+    <div className="flex items-center gap-2 mb-3">
+      <Sparkles className="h-4 w-4 text-blue-600" />
+      <span className="text-sm font-semibold text-blue-900">
+        Available Variables
+      </span>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      {ALLOWED_VARIABLES.map((variable) => (
+        <Badge
+          key={variable.key}
+          variant="secondary"
+          className="cursor-pointer hover:bg-blue-100"
+          onClick={() => {
+            const current = form.getValues("content");
+            form.setValue("content", current + `{{${variable.key}}}`);
+          }}
+          title={variable.description}
+        >
+          {`{{${variable.key}}}`}
+        </Badge>
+      ))}
+    </div>
+    <p className="text-xs text-blue-700 mt-2">
+      Click a variable to insert it into your template
+    </p>
+  </div>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(isEditOpen ? handleEdit : handleCreate)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Template Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Welcome Message" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
-                      <SelectItem value="transactional">Transactional</SelectItem>
-                      <SelectItem value="follow-up">Follow-up</SelectItem>
-                      <SelectItem value="promotional">Promotional</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
-                  <Select
-                    value={formData.language}
-                    onValueChange={(value) => setFormData({ ...formData, language: value })}
-                  >
-                    <SelectTrigger id="language">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EN">English</SelectItem>
-                      <SelectItem value="ES">Spanish</SelectItem>
-                      <SelectItem value="FR">French</SelectItem>
-                      <SelectItem value="AR">Arabic</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="content">Message Content</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Type your message here... Use {{variableName}} for personalization"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows={6}
-                  className="resize-none"
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="onboarding">Onboarding</SelectItem>
+                            <SelectItem value="transactional">Transactional</SelectItem>
+                            <SelectItem value="follow-up">Follow-up</SelectItem>
+                            <SelectItem value="promotional">Promotional</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="language"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Language</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="EN">English</SelectItem>
+                            <SelectItem value="ES">Spanish</SelectItem>
+                            <SelectItem value="FR">French</SelectItem>
+                            <SelectItem value="AR">Arabic</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message Content</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Type your message here... Use {{variableName}} for personalization"
+                          rows={6}
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Use double curly braces for variables. Only predefined variables are allowed.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                <p className="text-xs text-slate-500">
-                  Tip: Use double curly braces for variables, e.g., {`{{name}}, {{orderNumber}}`}
-                </p>
-              </div>
 
-              {/* Preview Variables */}
-              {extractVariables(formData.content).length > 0 && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-amber-600" />
-                    <span className="text-sm font-medium text-amber-900">
-                      Detected Variables:
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {extractVariables(formData.content).map((variable) => (
-                      <Badge key={variable} className="bg-amber-100 text-amber-800 border-amber-300">
-                        {`{{${variable}}}`}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!formData.name || !formData.content}
-              >
-                Create Template
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                {/* Preview Variables */}
+                {(() => {
+  const detectedVars = extractVariables(contentValue || "");
+  const validVars = detectedVars.filter(
+    v => ALLOWED_VARIABLE_KEYS.includes(v as (typeof ALLOWED_VARIABLE_KEYS)[number])
+  );
+  
+  const invalidVars = detectedVars.filter(
+    v => !ALLOWED_VARIABLE_KEYS.includes(v as (typeof ALLOWED_VARIABLE_KEYS)[number])
+  );
+  
 
-        {/* Edit Dialog */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Message Template</DialogTitle>
-              <DialogDescription>
-                Update your template content and settings
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Template Name</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  >
-                    <SelectTrigger id="edit-category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
-                      <SelectItem value="transactional">Transactional</SelectItem>
-                      <SelectItem value="follow-up">Follow-up</SelectItem>
-                      <SelectItem value="promotional">Promotional</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="edit-language">Language</Label>
-                  <Select
-                    value={formData.language}
-                    onValueChange={(value) => setFormData({ ...formData, language: value })}
-                  >
-                    <SelectTrigger id="edit-language">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EN">English</SelectItem>
-                      <SelectItem value="ES">Spanish</SelectItem>
-                      <SelectItem value="FR">French</SelectItem>
-                      <SelectItem value="AR">Arabic</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+  return (
+    <>
+      {validVars.length > 0 && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-green-900">
+              Valid Variables:
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {validVars.map((variable) => (
+              <Badge key={variable} className="bg-green-100 text-green-800 border-green-300">
+                {`{{${variable}}}`}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-content">Message Content</Label>
-                <Textarea
-                  id="edit-content"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows={6}
-                  className="resize-none"
-                />
-              </div>
+      {invalidVars.length > 0 && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-medium text-red-900">
+              Invalid Variables (not allowed):
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {invalidVars.map((variable) => (
+              <Badge key={variable} variant="destructive">
+                {`{{${variable}}}`}
+              </Badge>
+            ))}
+          </div>
+          <p className="text-xs text-red-700 mt-2">
+            Remove these or choose from available variables above
+          </p>
+        </div>
+      )}
+    </>
+  );
+})()}
 
-              {extractVariables(formData.content).length > 0 && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-amber-600" />
-                    <span className="text-sm font-medium text-amber-900">
-                      Detected Variables:
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {extractVariables(formData.content).map((variable) => (
-                      <Badge key={variable} className="bg-amber-100 text-amber-800 border-amber-300">
-                        {`{{${variable}}}`}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleEdit}
-                disabled={!formData.name || !formData.content}
-              >
-                Save Changes
-              </Button>
-            </DialogFooter>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={closeDialogs}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    {isEditOpen ? "Save Changes" : "Create Template"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <Dialog open={isDeleteOpen} onOpenChange={closeDialogs}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Template</DialogTitle>
@@ -603,7 +627,7 @@ export default function MessageTemplatesPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+              <Button variant="outline" onClick={closeDialogs}>
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
