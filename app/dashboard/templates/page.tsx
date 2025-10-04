@@ -48,13 +48,13 @@ import {
   Calendar,
   Sparkles,
 } from "lucide-react";
-import { toast } from "react-toastify";
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { useTemplateFilters } from "@/lib/hooks/use-template-filters";
 import { useTemplateDialog } from "@/lib/hooks/use-template-dialog";
 import { templateService } from "@/lib/services/template.service";
 import { MessageTemplate } from "@/lib/types/template";
 import { ALLOWED_VARIABLE_KEYS, ALLOWED_VARIABLES } from "@/lib/constants/template-variables";
+import { toast } from "react-toastify";
 
 // Zod schema for form validation
 const templateFormSchema = z.object({
