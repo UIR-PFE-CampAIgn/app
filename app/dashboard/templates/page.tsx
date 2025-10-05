@@ -38,7 +38,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   Plus,
@@ -49,6 +48,7 @@ import {
   Calendar,
   Sparkles,
 } from "lucide-react";
+import { toast } from "react-toastify";
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { useTemplateFilters } from "@/lib/hooks/use-template-filters";
 import { useTemplateDialog } from "@/lib/hooks/use-template-dialog";
@@ -64,10 +64,15 @@ const templateFormSchema = z.object({
   language: z.string().min(2, "Language is required"),
 });
 
-type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
+type TemplateFormValues = z.infer<typeof templateFormSchema>;
+const defaultValues: TemplateFormValues = {
+  name: "",
+  content: "",
+  category: "general",
+  language: "EN",
+};
 export default function MessageTemplatesPage() {
-  const { toast } = useToast();
   const {
     templates,
     loading,
@@ -98,17 +103,32 @@ export default function MessageTemplatesPage() {
     openDelete,
     closeDialogs,
   } = useTemplateDialog();
-
-  // React Hook Form
   const form = useForm<TemplateFormValues>({
     resolver: zodResolver(templateFormSchema),
-    defaultValues: {
-      name: "",
-      content: "",
-      category: "general",
-      language: "EN",
-    },
+    defaultValues,
   });
+  useEffect(() => {
+    if (isCreateOpen) {
+      form.reset(defaultValues);
+    }
+  }, [isCreateOpen, form]);
+  useEffect(() => {
+    if (isEditOpen && selectedTemplate) {
+      form.reset({
+        name: selectedTemplate.name,
+        content: selectedTemplate.content,
+        category: selectedTemplate.category,
+        language: selectedTemplate.language,
+      });
+    }
+  }, [isEditOpen, selectedTemplate, form]);
+
+  // 3️⃣ When any dialog closes → reset to defaults
+  useEffect(() => {
+    if (!isCreateOpen && !isEditOpen && !isDeleteOpen) {
+      form.reset(defaultValues);
+    }
+  }, [isCreateOpen, isEditOpen, isDeleteOpen, form]);
 
   // Load templates on mount
   useEffect(() => {
@@ -124,16 +144,11 @@ export default function MessageTemplatesPage() {
       await createTemplate(values);
       closeDialogs();
       form.reset();
-      toast({
-        title: "Success",
-        description: "Template created successfully",
-      });
+      toast.success("Template created successfully");
+
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to create template',
-        variant: "destructive",
-      });
+      toast.error(err instanceof Error ? err.message : "Failed to create template");
+
     }
   };
 
@@ -143,16 +158,9 @@ export default function MessageTemplatesPage() {
       await updateTemplate(selectedTemplate.id, values);
       closeDialogs();
       form.reset();
-      toast({
-        title: "Success",
-        description: "Template updated successfully",
-      });
+      toast.success("Template updated successfully");
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to update template',
-        variant: "destructive",
-      });
+      toast.error(err instanceof Error ? err.message : "Failed to update template");
     }
   };
 
@@ -161,32 +169,20 @@ export default function MessageTemplatesPage() {
     try {
       await deleteTemplate(selectedTemplate.id);
       closeDialogs();
-      toast({
-        title: "Success",
-        description: "Template deleted successfully",
-      });
+      toast.success("Template deleted successfully");
+
+    
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to delete template',
-        variant: "destructive",
-      });
+      toast.error(err instanceof Error ? err.message : "Failed to delete template");
     }
   };
 
   const handleDuplicate = async (templateId: string) => {
     try {
       await duplicateTemplate(templateId);
-      toast({
-        title: "Success",
-        description: "Template duplicated successfully",
-      });
+      toast.success("Template duplicated successfully");
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to duplicate template',
-        variant: "destructive",
-      });
+      toast.error(err instanceof Error ? err.message : "Failed to duplicate template");
     }
   };
 
@@ -424,14 +420,16 @@ export default function MessageTemplatesPage() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={isCreateOpen || isEditOpen} onOpenChange={closeDialogs}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
               <DialogTitle>{isEditOpen ? "Edit" : "Create"} Message Template</DialogTitle>
               <DialogDescription>
                 {isEditOpen ? "Update your template content and settings" : "Create a reusable template with personalized variables"}
               </DialogDescription>
             </DialogHeader>
             {/* Available Variables Section */}
+            <div className="overflow-y-auto px-1 space-y-4 py-2">
+
   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
     <div className="flex items-center gap-2 mb-3">
       <Sparkles className="h-4 w-4 text-blue-600" />
@@ -614,6 +612,7 @@ export default function MessageTemplatesPage() {
                 </DialogFooter>
               </form>
             </Form>
+</div>
           </DialogContent>
         </Dialog>
 
