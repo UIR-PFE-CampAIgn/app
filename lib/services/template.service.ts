@@ -16,13 +16,16 @@ class TemplateService {
   }
 
   async getAll(filters?: { category?: string; search?: string }): Promise<MessageTemplate[]> {
-    // Validate filters with Zod
-    const validatedFilters = templateQuerySchema.parse(filters || {});
-    
-    
+    // ✅ Use safeParse to avoid throwing
+    const validation = templateQuerySchema.safeParse(filters || {});
+
+    if (!validation.success) {
+      console.error('Invalid filters:', validation.error.flatten());
+      throw new Error('Invalid filter parameters.');
+    }
 
     try {
-      const templates = await templatesApi.getAll(validatedFilters);
+      const templates = await templatesApi.getAll(validation.data);
       return templates;
     } catch (error) {
       console.error('Failed to fetch templates:', error);
@@ -31,11 +34,16 @@ class TemplateService {
   }
 
   async create(data: CreateTemplateDto): Promise<MessageTemplate> {
-    // Zod replaces validateTemplate method
-    const validated = createTemplateSchema.parse(data);
+    // ✅ Use safeParse instead of parse
+    const validation = createTemplateSchema.safeParse(data);
+
+    if (!validation.success) {
+      console.error('Invalid template data:', validation.error.flatten());
+      throw new Error('Invalid template data.');
+    }
 
     try {
-      const template = await templatesApi.create(validated);
+      const template = await templatesApi.create(validation.data);
       return template;
     } catch (error) {
       console.error('Failed to create template:', error);
@@ -44,11 +52,16 @@ class TemplateService {
   }
 
   async update(id: string, data: UpdateTemplateDto): Promise<MessageTemplate> {
-    // Validate with Zod
-    const validated = updateTemplateSchema.parse(data);
+    // ✅ Use safeParse here too
+    const validation = updateTemplateSchema.safeParse(data);
+
+    if (!validation.success) {
+      console.error('Invalid update data:', validation.error.flatten());
+      throw new Error('Invalid update data.');
+    }
 
     try {
-      const template = await templatesApi.update(id, validated);
+      const template = await templatesApi.update(id, validation.data);
       return template;
     } catch (error) {
       console.error('Failed to update template:', error);
