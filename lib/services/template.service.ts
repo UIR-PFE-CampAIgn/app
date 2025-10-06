@@ -23,7 +23,6 @@ class TemplateService {
       console.error('Invalid filters:', validation.error.flatten());
       throw new Error('Invalid filter parameters.');
     }
-
     try {
       const templates = await templatesApi.getAll(validation.data);
       return templates;

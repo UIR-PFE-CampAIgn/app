@@ -1,33 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Filter, Phone } from "lucide-react";
-
-const fakeLeads = [
-  { id: "1", name: "Alice Johnson", phone: "+123456789", createdAt: "2025-09-20T10:00:00Z" },
-  { id: "2", name: "Bob Smith", phone: "+198765432", createdAt: "2025-09-21T15:30:00Z" },
-  { id: "3", name: "Unknown", phone: "+111222333", createdAt: "2025-09-22T18:45:00Z" },
-];
+import { useLeads } from "@/lib/hooks/use-leads";
 
 export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const { leads, loading, error, fetchLeads, searchLeads } = useLeads();
 
-  const filteredLeads = fakeLeads.filter(
-    (lead) =>
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm)
-  );
+  // Load leads on mount
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        searchLeads(searchTerm);
+      } else {
+        fetchLeads();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, searchLeads, fetchLeads]);
+
+  // Loading state
+  if (loading && leads.length === 0) {
+    return (
+      <div className="p-8">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-slate-600">Loading leads...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle className="text-2xl font-bold">Leads ({filteredLeads.length})</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Leads ({leads.length})
+          </CardTitle>
 
           <div className="flex gap-2 w-full md:w-auto">
             <div className="relative flex-1">
@@ -45,37 +71,84 @@ export default function LeadsPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3">
-          {filteredLeads.map((lead) => (
-            <div
-              key={lead.id}
-              
-              className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition"
+        {/* Error State */}
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm">{error}</p>
+            <Button
+              onClick={() => fetchLeads()}
+              variant="outline"
+              size="sm"
+              className="mt-2"
             >
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`}
-                  />
-                  <AvatarFallback>
-                    {lead.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold">{lead.name}</h3>
-                  <div className="flex items-center text-sm text-muted-foreground gap-1">
-                    <Phone className="h-3 w-3" /> {lead.phone}
+              Retry
+            </Button>
+          </div>
+        )}
+
+        <CardContent className="space-y-3">
+          {/* Loading indicator for search */}
+          {loading && leads.length > 0 && (
+            <div className="text-center py-2 text-sm text-slate-500">
+              Searching...
+            </div>
+          )}
+
+          {/* Leads List */}
+          {leads.length === 0 && !loading ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500 mb-2">No leads found</p>
+              {searchTerm && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchTerm("")}
+                >
+                  Clear Search
+                </Button>
+              )}
+            </div>
+          ) : (
+            leads.map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.display_name || lead.provider_user_id}`}
+                    />
+                   <AvatarFallback>
+  {lead.display_name
+    ? lead.display_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : (lead.provider_user_id || 'UK').substring(0, 2).toUpperCase()} {/* ✅ Fixed */}
+</AvatarFallback>
+                  </Avatar>
+                  <div>
+                  <h3 className="font-semibold">
+  {lead.display_name || "Unknown"}
+</h3>
+<div className="flex items-center text-sm text-muted-foreground gap-2">
+  <Phone className="h-3 w-3" />
+  {lead.provider_user_id} {/* ✅ Use snake_case */}
+  <Badge variant="secondary" className="text-xs">
+    {lead.provider}
+  </Badge>
+</div>
                   </div>
                 </div>
+                <Badge variant="outline">
+                  {new Date(lead.created_at).toLocaleDateString()}
+                </Badge>
               </div>
-              <Badge variant="outline">
-                {new Date(lead.createdAt).toLocaleDateString()}
-              </Badge>
-            </div>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
