@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { campaignService } from '@/lib/services/campaign.service';
 import { Campaign, CampaignLog, CreateCampaignDto } from '@/lib/types/campaign';
+import { campaignsListSchema } from '../validators/campaign.validator';
 
 export function useCampaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -15,7 +16,15 @@ export function useCampaigns() {
     
     try {
       const data = await campaignService.getAll(filters);
-      setCampaigns(data);
+
+const result = campaignsListSchema.safeParse(data);
+
+if (result.success) {
+  setCampaigns(result.data);
+} else {
+  console.error("❌ Invalid campaign data:", result.error);
+  setError("Invalid campaign data received from server");
+}
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

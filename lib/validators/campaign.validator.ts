@@ -115,8 +115,26 @@ export const campaignFormSchema = z.object({
     path: ["scheduled_date"]
   }
 );
+export const campaignSchema = z.object({
+  _id: z.string(),
+  business_id: z.string(),
+  template_id: z.string(),
+  name: z.string(),
+  schedule_type: z.enum(["immediate", "scheduled", "recurring"]),
+  scheduled_at: z.string().optional(),
+  cron_expression: z.string().optional(),
+  target_leads: z.array(z.string()),
+  status: z.enum(["draft", "scheduled", "running", "completed", "failed"]),
+  total_recipients: z.coerce.number().default(0),
+  sent_count: z.coerce.number().default(0),
+  failed_count: z.coerce.number().default(0),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
 // Type exports
+export const campaignsListSchema = z.array(campaignSchema);
+export type Campaign = z.infer<typeof campaignSchema>;
 export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;
 export type CampaignQueryParams = z.infer<typeof campaignQuerySchema>;
 export type CampaignFormInput = z.infer<typeof campaignFormSchema>;
