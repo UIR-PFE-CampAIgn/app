@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
   Plus,
@@ -43,7 +42,8 @@ import { useCampaigns, useCampaignLogs } from "@/lib/hooks/use-campaigns";
 import { useCampaignDialog } from "@/lib/hooks/use-campaign-dialog";
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { campaignService } from "@/lib/services/campaign.service";
-
+import { useLeads } from "@/lib/hooks/use-leads";
+import { Checkbox } from "@/components/ui/checkbox";
 export default function CampaignsPage() {
   const {
     campaigns,
@@ -71,9 +71,17 @@ export default function CampaignsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  
-  const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(selectedCampaignId);
+  const { leads, loading: leadsLoading, fetchLeads, searchLeads } = useLeads();
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: string; name: string } | null>(null);
 
+const [leadSearchTerm, setLeadSearchTerm] = useState("");
+  const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(selectedCampaignId);
+  useEffect(() => {
+    if (isCreateOpen) {
+      fetchLeads();
+    }
+  }, [isCreateOpen, fetchLeads]);
   // Load data on mount
   useEffect(() => {
     fetchCampaigns();
@@ -82,7 +90,7 @@ export default function CampaignsPage() {
 
   // Filter campaigns
   const filteredCampaigns = campaigns.filter((campaign) => {
-    const matchesSearch = campaign.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = campaign.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || campaign.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -126,15 +134,17 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleCancel = async (campaignId: string) => {
-    if (!confirm('Are you sure you want to cancel this campaign?')) return;
-
+  const handleCancelConfirm = async () => {
+    if (!selectedCancelCampaign) return;
     try {
-      await cancelCampaign(campaignId);
+      await cancelCampaign(selectedCancelCampaign.id);
+      setIsCancelOpen(false);
+      setSelectedCancelCampaign(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to cancel campaign');
     }
   };
+  
 
   const viewLogs = async (campaignId: string) => {
     setSelectedCampaignId(campaignId);
@@ -390,7 +400,10 @@ export default function CampaignsPage() {
                           variant="outline"
                           size="sm"
                           className="text-red-600 hover:text-red-700"
-                          onClick={() => handleCancel(campaign._id)}
+                          onClick={() => {
+                            setSelectedCancelCampaign({ id: campaign._id, name: campaign.name });
+                            setIsCancelOpen(true);
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -511,29 +524,93 @@ export default function CampaignsPage() {
                 <p className="text-sm text-red-500">{errors.scheduled_date}</p>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="recipients">Target Recipients</Label>
-                <Textarea
-                  id="recipients"
-                  placeholder="Enter phone numbers (one per line)"
-                  rows={4}
-                  className="resize-none font-mono text-sm"
-                  value={formData.target_leads.join('\n')}
-                  onChange={(e) => {
-                    const leads = e.target.value
-                      .split('\n')
-                      .map(l => l.trim())
-                      .filter(l => l.length > 0);
-                    setFormData({ ...formData, target_leads: leads });
-                  }}
-                />
-                {errors.target_leads && (
-                  <p className="text-sm text-red-500">{errors.target_leads}</p>
-                )}
-                <p className="text-xs text-slate-500">
-                  {formData.target_leads.length} recipient(s) selected
-                </p>
-              </div>
+              {/* Recipients Section - Replace existing one */}
+<div className="space-y-2">
+  <Label>Target Recipients</Label>
+  
+  {/* Search Leads */}
+  <div className="relative">
+    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    <Input
+      placeholder="Search leads..."
+      value={leadSearchTerm}
+      onChange={(e) => {
+        setLeadSearchTerm(e.target.value);
+        searchLeads(e.target.value);
+      }}
+      className="pl-10"
+    />
+  </div>
+
+  {/* Leads List */}
+  <div className="border rounded-lg max-h-60 overflow-y-auto">
+    {leadsLoading ? (
+      <div className="p-4 text-center text-sm text-slate-500">
+        Loading leads...
+      </div>
+    ) : leads.length === 0 ? (
+      <div className="p-4 text-center text-sm text-slate-500">
+        No leads found
+      </div>
+    ) : (
+      <div className="divide-y">
+        {leads.map((lead) => (
+  <div
+    key={lead.id}
+    className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer"
+    onClick={() => {
+      const current = formData.target_leads;
+      const newLeads = current.includes(lead.provider_user_id)
+        ? current.filter(phone => phone !== lead.provider_user_id)
+        : [...current, lead.provider_user_id];
+      setFormData({ ...formData, target_leads: newLeads });
+    }}
+  >
+    <Checkbox
+      checked={formData.target_leads.includes(lead.provider_user_id)}
+      onCheckedChange={() => {
+        const current = formData.target_leads;
+        const newLeads = current.includes(lead.provider_user_id)
+          ? current.filter(phone => phone !== lead.provider_user_id)
+          : [...current, lead.provider_user_id];
+        setFormData({ ...formData, target_leads: newLeads });
+      }}
+    />
+    <div className="flex-1 min-w-0">
+      <p className="font-medium text-sm truncate">
+        {lead.display_name || lead.provider_user_id}
+      </p>
+      <p className="text-xs text-slate-500">
+        📞 {lead.provider_user_id} • {lead.provider}
+      </p>
+    </div>
+  </div>
+))}
+
+      </div>
+    )}
+  </div>
+
+  {/* Selection Summary */}
+  <div className="flex items-center justify-between text-sm">
+    <span className="text-slate-600">
+      {formData.target_leads.length} recipient(s) selected
+    </span>
+    {formData.target_leads.length > 0 && (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setFormData({ ...formData, target_leads: [] })}
+      >
+        Clear All
+      </Button>
+    )}
+  </div>
+
+  {errors.target_leads && (
+    <p className="text-sm text-red-500">{errors.target_leads}</p>
+  )}
+</div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
@@ -599,6 +676,32 @@ export default function CampaignsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Cancel Campaign Confirmation Dialog */}
+<Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Cancel Campaign</DialogTitle>
+      <DialogDescription>
+        Are you sure you want to cancel the campaign{" "}
+        <span className="font-semibold text-slate-900">
+          “{selectedCancelCampaign?.name}”
+        </span>
+        ? This action cannot be undone.
+      </DialogDescription>
+    </DialogHeader>
+
+    <DialogFooter className="mt-4">
+      <Button variant="outline" onClick={() => setIsCancelOpen(false)}>
+        Keep Campaign
+      </Button>
+      <Button variant="destructive" onClick={handleCancelConfirm}>
+        Yes, Cancel It
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
       </div>
     </div>
   );
