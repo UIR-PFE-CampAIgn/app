@@ -1,9 +1,11 @@
-import axios from 'axios';
+import axios from "axios";
+
+const baseURL = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:3000";
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseURL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: 10000, // 10 seconds
 });
@@ -14,13 +16,13 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response) {
       // Server responded with error
-      throw new Error(error.response.data?.message || 'An error occurred');
+      throw new Error(error.response.data?.message || "An error occurred");
     } else if (error.request) {
       // Request made but no response
-      throw new Error('No response from server');
+      throw new Error("No response from server");
     } else {
       // Error setting up request
-      throw new Error('Request failed');
+      throw new Error("Request failed");
     }
   }
 );
