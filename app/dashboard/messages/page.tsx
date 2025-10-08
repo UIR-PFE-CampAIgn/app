@@ -1,185 +1,116 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Search,
-  Filter,
-  MessageCircle,
-  Phone,
-  ArrowRightLeft,
-  Bot,
-  Smile,
-  Frown,
-  Meh,
-  HelpCircle,
-  ArrowUpRight,
-  Send,
-  MoreVertical,
-  Clock,
-  CheckCheck,
+  Search, Filter, MessageCircle, Phone, ArrowUpRight, Send, MoreVertical, Clock, CheckCheck,
 } from "lucide-react";
-
-type Conversation = {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  platform: string;
-  lastMessage: string;
-  lastMessageTime: string;
-  status: string;
-  sentiment: string;
-  isAiHandled: boolean;
-  unreadCount: number;
-  language: string;
-};
-
-const fakeConversations: Conversation[] = [
-  {
-    id: "1",
-    customerName: "Alice Johnson",
-    customerPhone: "+1 555-1234",
-    platform: "whatsapp",
-    lastMessage: "Thanks for your help!",
-    lastMessageTime: new Date().toISOString(),
-    status: "active",
-    sentiment: "happy",
-    isAiHandled: true,
-    unreadCount: 2,
-    language: "EN",
-  },
-  {
-    id: "2",
-    customerName: "Mark Lee",
-    customerPhone: "+44 22 555",
-    platform: "instagram",
-    lastMessage: "Can you check this order?",
-    lastMessageTime: new Date().toISOString(),
-    status: "escalated",
-    sentiment: "frustrated",
-    isAiHandled: false,
-    unreadCount: 0,
-    language: "EN",
-  },
-  {
-    id: "3",
-    customerName: "Sarah Chen",
-    customerPhone: "+1 555-9876",
-    platform: "whatsapp",
-    lastMessage: "Perfect, thank you!",
-    lastMessageTime: new Date(Date.now() - 3600000).toISOString(),
-    status: "resolved",
-    sentiment: "happy",
-    isAiHandled: true,
-    unreadCount: 0,
-    language: "EN",
-  },
-];
-
-const fakeMessages = [
-  {
-    id: "m1",
-    sender: "customer",
-    content: "Hi, I need help with my order.",
-    timestamp: new Date(Date.now() - 600000).toISOString(),
-    sentiment: "uncertain",
-  },
-  {
-    id: "m2",
-    sender: "ai",
-    content: "Sure! Could you share your order number?",
-    timestamp: new Date(Date.now() - 540000).toISOString(),
-  },
-  {
-    id: "m3",
-    sender: "customer",
-    content: "It's #4521.",
-    timestamp: new Date(Date.now() - 480000).toISOString(),
-    sentiment: "happy",
-  },
-  {
-    id: "m4",
-    sender: "ai",
-    content: "Great! I found your order. It's currently being processed and should ship within 24 hours. You'll receive tracking information via email.",
-    timestamp: new Date(Date.now() - 420000).toISOString(),
-  },
-  {
-    id: "m5",
-    sender: "customer",
-    content: "Thanks for your help!",
-    timestamp: new Date().toISOString(),
-    sentiment: "happy",
-  },
-];
+import { useChats } from "@/lib/hooks/use-chats";
+import { useChatMessages } from "@/lib/hooks/use-chat-messages";
+import { Chat, Message } from "@/lib/types/chat";
 
 export default function InboxPage() {
-  const [selectedChat, setSelectedChat] = useState<Conversation | null>(fakeConversations[0]);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("open");
   const [newMessage, setNewMessage] = useState("");
 
-  const filteredChats = fakeConversations.filter((chat) => {
-    const matchesSearch =
-      chat.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || chat.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+  const { chats, loading: chatsLoading, error: chatsError, fetchChats } = useChats();
+  const { messages, loading: messagesLoading, fetchMessages, sendMessage } = useChatMessages(
+    selectedChat?._id || ""
+  );
+
+  // Fetch chats on mount and when filters change
+  useEffect(() => {
+    fetchChats({
+      businessId: 'default-business',
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      search: searchTerm || undefined,
+      limit: 50,
+    });
+  }, [fetchChats, statusFilter,searchTerm]);
+
+  // Fetch messages when chat is selected
+  useEffect(() => {
+    if (selectedChat) {
+      fetchMessages(50);
+    }
+  }, [selectedChat, fetchMessages]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        fetchChats({
+          businessId: 'default-business',
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          search: searchTerm,
+        });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, fetchChats]);
+
+  const filteredChats = chats;
+
+  
+
+ // Formats time like "2:45 PM"
+const formatMessageTime = (timestamp: string) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
   });
+};
 
-  const getSentimentIcon = (sentiment?: string) => {
-    switch (sentiment) {
-      case "happy":
-        return <Smile className="h-3.5 w-3.5 text-emerald-500" />;
-      case "frustrated":
-        return <Frown className="h-3.5 w-3.5 text-rose-500" />;
-      case "uncertain":
-        return <HelpCircle className="h-3.5 w-3.5 text-amber-500" />;
-      default:
-        return <Meh className="h-3.5 w-3.5 text-slate-400" />;
-    }
-  };
+// Formats date like "Today", "Yesterday", or "6 Oct"
+const formatMessageDate = (timestamp: string) => {
+  const date = new Date(timestamp);
+  const now = new Date();
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+  const isToday =
+    date.toDateString() === now.toDateString();
+
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) return "Today";
+  if (isYesterday) return "Yesterday";
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedChat) return;
     
-    if (diffInHours < 1) {
-      return "Just now";
-    } else if (diffInHours < 24) {
-      return date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
+    try {
+      await sendMessage({
+        text: newMessage,
+        msg_type: 'text',
       });
-    } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
+      setNewMessage("");
+    } catch (error) {
+      console.error('Failed to send message:', error);
     }
   };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    console.log("Send:", newMessage);
-    setNewMessage("");
+  const getMessageSender = (msg: Message): 'customer' | 'ai' | 'agent' => {
+    if (msg.direction === 'inbound') return 'customer';
+    if (msg.ai_reply) return 'ai';
+    return 'agent';
   };
-
+  
   return (
     <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-100/50">
       {/* Left Sidebar */}
@@ -192,7 +123,7 @@ export default function InboxPage() {
                 Inbox
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                {filteredChats.length} conversations
+                {chatsLoading ? 'Loading...' : `${filteredChats.length} conversations`}
               </p>
             </div>
             <Button variant="ghost" size="icon" className="rounded-full">
@@ -219,22 +150,42 @@ export default function InboxPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="escalated">Escalated</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
+        {/* Error Message */}
+        {chatsError && (
+          <div className="p-4 bg-red-50 border-b border-red-200">
+            <p className="text-sm text-red-600">{chatsError}</p>
+          </div>
+        )}
+
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
+          {chatsLoading && (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+
+          {!chatsLoading && filteredChats.length === 0 && (
+            <div className="text-center p-8 text-slate-500">
+              <MessageCircle className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+              <p>No conversations found</p>
+            </div>
+          )}
+
           {filteredChats.map((chat) => (
             <div
-              key={chat.id}
+              key={chat._id}
               onClick={() => setSelectedChat(chat)}
               className={`p-4 border-b border-slate-100 cursor-pointer transition-all hover:bg-slate-50 relative ${
-                selectedChat?.id === chat.id
+                selectedChat?._id === chat._id
                   ? "bg-blue-50/50 border-l-3 border-l-blue-500"
                   : ""
               }`}
@@ -243,15 +194,15 @@ export default function InboxPage() {
                 <div className="relative">
                   <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                     <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.customerName}`}
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.lead_name}`}
                     />
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                      {chat.customerName[0]}
+                      {chat.lead_name?.[0] || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  {chat.unreadCount > 0 && (
+                  {chat.unread_count && chat.unread_count > 0 && (
                     <div className="absolute -top-1 -right-1 h-5 w-5 bg-rose-500 rounded-full flex items-center justify-center text-xs text-white font-medium shadow-lg">
-                      {chat.unreadCount}
+                      {chat.unread_count}
                     </div>
                   )}
                 </div>
@@ -259,24 +210,24 @@ export default function InboxPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-semibold text-slate-900 truncate">
-                      {chat.customerName}
+                      {chat.lead_name || 'Unknown'}
                     </h4>
                     <span className="text-xs text-slate-500 flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {formatTime(chat.lastMessageTime)}
+                      {formatMessageTime(chat.last_message?.created_at || chat.created_at)}
                     </span>
                   </div>
                   
                   <p className="text-sm text-slate-600 truncate mb-2">
-                    {chat.lastMessage}
+                    {chat.last_message?.text || 'No messages yet'}
                   </p>
                   
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Badge
                       variant={
-                        chat.status === "active"
+                        chat.status === "open"
                           ? "default"
-                          : chat.status === "escalated"
+                          : chat.status === "archived"
                           ? "destructive"
                           : "secondary"
                       }
@@ -284,13 +235,9 @@ export default function InboxPage() {
                     >
                       {chat.status}
                     </Badge>
-                    {chat.isAiHandled && (
-                      <Badge variant="outline" className="text-xs px-2 py-0.5 h-5 border-blue-200 text-blue-700 bg-blue-50">
-                        <Bot className="h-3 w-3 mr-1" />
-                        AI
-                      </Badge>
-                    )}
-                    {getSentimentIcon(chat.sentiment)}
+                    <Badge variant="outline" className="text-xs px-2 py-0.5 h-5">
+                      {chat.message_count} msgs
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -309,33 +256,29 @@ export default function InboxPage() {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-11 w-11 border-2 border-slate-100">
                     <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedChat.customerName}`}
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedChat.lead_name}`}
                     />
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                      {selectedChat.customerName[0]}
+                      {selectedChat.lead_name?.[0] || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-semibold text-slate-900 text-lg">
-                      {selectedChat.customerName}
+                      {selectedChat.lead_name || 'Unknown'}
                     </h3>
                     <div className="flex items-center gap-3 text-sm text-slate-500">
                       <span className="flex items-center gap-1">
                         <Phone className="h-3.5 w-3.5" />
-                        {selectedChat.customerPhone}
+                        {selectedChat.lead_phone || 'N/A'}
                       </span>
                       <Badge variant="outline" className="text-xs h-5">
-                        {selectedChat.language}
+                        WhatsApp
                       </Badge>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Escalate
-                  </Button>
                   <Button variant="outline" size="sm" className="rounded-full">
                     <ArrowUpRight className="h-4 w-4 mr-2" />
                     Profile
@@ -349,52 +292,83 @@ export default function InboxPage() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50/50 to-white">
-              {fakeMessages.map((msg, idx) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${
-                    msg.sender === "customer" ? "justify-start" : "justify-end"
-                  } animate-in fade-in slide-in-from-bottom-2 duration-300`}
-                  style={{ animationDelay: `${idx * 50}ms` }}
-                >
-                  <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
-                      msg.sender === "customer"
-                        ? "bg-white border border-slate-200"
-                        : msg.sender === "ai"
-                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
-                        : "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`text-xs font-medium ${
-                        msg.sender === "customer" ? "text-slate-700" : "text-white/90"
-                      }`}>
-                        {msg.sender === "customer"
-                          ? selectedChat.customerName
-                          : msg.sender === "ai"
-                          ? "AI Assistant"
-                          : "Agent"}
-                      </span>
-                      {msg.sender === "ai" && <Bot className="h-3.5 w-3.5 opacity-90" />}
-                      {msg.sender === "customer" && msg.sentiment && getSentimentIcon(msg.sentiment)}
-                    </div>
-                    <p className={`text-sm leading-relaxed ${
-                      msg.sender === "customer" ? "text-slate-900" : "text-white"
-                    }`}>
-                      {msg.content}
-                    </p>
-                    <div className={`flex items-center justify-end gap-1 text-xs mt-2 ${
-                      msg.sender === "customer" ? "text-slate-500" : "text-white/70"
-                    }`}>
-                      {formatTime(msg.timestamp)}
-                      {msg.sender !== "customer" && (
-                        <CheckCheck className="h-3 w-3 ml-1" />
-                      )}
-                    </div>
-                  </div>
+              {messagesLoading && (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 </div>
-              ))}
+              )}
+
+{messages.map((msg, idx) => {
+  const sender = getMessageSender(msg);
+  const prevMsg = messages[idx - 1];
+  const showDateSeparator =
+    !prevMsg ||
+    new Date(prevMsg.created_at).toDateString() !==
+      new Date(msg.created_at).toDateString();
+
+  return (
+    <div key={msg._id}>
+      {showDateSeparator && (
+        <div className="flex justify-center my-4">
+          <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+            {formatMessageDate(msg.created_at)}
+          </span>
+        </div>
+      )}
+
+      <div
+        className={`flex ${
+          sender === "customer" ? "justify-start" : "justify-end"
+        } animate-in fade-in slide-in-from-bottom-2 duration-300`}
+        style={{ animationDelay: `${idx * 50}ms` }}
+      >
+        <div
+          className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
+            sender === "customer"
+              ? "bg-white border border-slate-200"
+              : sender === "ai"
+              ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
+              : "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <span
+              className={`text-xs font-medium ${
+                sender === "customer"
+                  ? "text-slate-700"
+                  : "text-white/90"
+              }`}
+            >
+              {sender === "customer"
+                ? selectedChat.lead_name
+                : sender === "ai"
+                ? "AI Assistant"
+                : "Agent"}
+            </span>
+          </div>
+
+          <p
+            className={`text-sm leading-relaxed ${
+              sender === "customer" ? "text-slate-900" : "text-white"
+            }`}
+          >
+            {msg.text}
+          </p>
+
+          <div
+            className={`flex items-center justify-end gap-1 text-xs mt-2 ${
+              sender === "customer" ? "text-slate-500" : "text-white/70"
+            }`}
+          >
+            {formatMessageTime(msg.created_at)}
+            {sender !== "customer" && <CheckCheck className="h-3 w-3 ml-1" />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})}
+
             </div>
 
             {/* Input */}
