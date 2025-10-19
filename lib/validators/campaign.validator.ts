@@ -37,9 +37,9 @@ export const createCampaignSchema = z.object({
       { message: "Invalid cron expression format" }
     ),
     
-  target_leads: z.array(z.string())
-    .min(1, "At least one recipient is required")
-    .max(1000, "Maximum 1000 recipients per campaign"),
+  target_leads: z.array(z.enum(["hot", "warm", "cold"]))
+    .min(1, "At least one score type is required")
+    .max(3, "Maximum 3 score types per campaign"),
     
   lead_data: z.array(z.record(z.any()))
     .optional(),
@@ -101,8 +101,8 @@ export const campaignFormSchema = z.object({
   scheduled_date: z.string().optional(),
   scheduled_time: z.string().optional(),
     
-  target_leads: z.array(z.string())
-    .min(1, "Please select at least one recipient"),
+  target_leads: z.array(z.enum(["hot", "warm", "cold"]))
+    .min(1, "Please select at least one score type"),
 }).refine(
   (data) => {
     if (data.schedule_type === "scheduled") {
@@ -123,7 +123,7 @@ export const campaignSchema = z.object({
   schedule_type: z.enum(["immediate", "scheduled", "recurring"]),
   scheduled_at: z.string().optional(),
   cron_expression: z.string().optional(),
-  target_leads: z.array(z.string()),
+  target_leads: z.array(z.enum(["hot", "warm", "cold"])),
   status: z.enum(["draft", "scheduled", "running", "completed", "failed"]),
   total_recipients: z.coerce.number().default(0),
   sent_count: z.coerce.number().default(0),
