@@ -5,6 +5,7 @@ export const leadResponseSchema = z.object({
   provider: z.string().min(1, "Provider is required"),
   provider_user_id: z.string().min(1, "Provider user ID is required"),
   display_name: z.string().optional(),
+  score: z.string().optional(),
   created_at: z.string().datetime("Invalid date format"),
 });
 

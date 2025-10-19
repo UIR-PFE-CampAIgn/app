@@ -6,8 +6,42 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Filter, Phone } from "lucide-react";
+import { Search, Filter, Phone, Star, Flame, Snowflake } from "lucide-react";
 import { useLeads } from "@/lib/hooks/use-leads";
+
+// Helper function to get score styling
+const getScoreStyling = (score?: string) => {
+  switch (score?.toLowerCase()) {
+    case 'hot':
+      return {
+        variant: 'destructive' as const,
+        className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
+        icon: Flame,
+        label: 'Hot Lead'
+      };
+    case 'warm':
+      return {
+        variant: 'default' as const,
+        className: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200',
+        icon: Star,
+        label: 'Warm Lead'
+      };
+    case 'cold':
+      return {
+        variant: 'secondary' as const,
+        className: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+        icon: Snowflake,
+        label: 'Cold Lead'
+      };
+    default:
+      return {
+        variant: 'outline' as const,
+        className: 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200',
+        icon: Star,
+        label: 'Unscored'
+      };
+  }
+};
 
 export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,45 +143,59 @@ export default function LeadsPage() {
               )}
             </div>
           ) : (
-            leads.map((lead) => (
-              <div
-                key={lead.id}
-                className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.display_name || lead.provider_user_id}`}
-                    />
-                   <AvatarFallback>
-  {lead.display_name
-    ? lead.display_name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : (lead.provider_user_id || 'UK').substring(0, 2).toUpperCase()} {/* ✅ Fixed */}
-</AvatarFallback>
-                  </Avatar>
-                  <div>
-                  <h3 className="font-semibold">
-  {lead.display_name || "Unknown"}
-</h3>
-<div className="flex items-center text-sm text-muted-foreground gap-2">
-  <Phone className="h-3 w-3" />
-  {lead.provider_user_id} {/* ✅ Use snake_case */}
-  <Badge variant="secondary" className="text-xs">
-    {lead.provider}
-  </Badge>
-</div>
+            leads.map((lead) => {
+              const scoreStyling = getScoreStyling(lead.score);
+              const ScoreIcon = scoreStyling.icon;
+              
+              return (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.display_name || lead.provider_user_id}`}
+                      />
+                     <AvatarFallback>
+    {lead.display_name
+      ? lead.display_name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2)
+      : (lead.provider_user_id || 'UK').substring(0, 2).toUpperCase()} {/* ✅ Fixed */}
+  </AvatarFallback>
+                    </Avatar>
+                    <div>
+                    <h3 className="font-semibold">
+    {lead.display_name || "Unknown"}
+  </h3>
+  <div className="flex items-center text-sm text-muted-foreground gap-2">
+    <Phone className="h-3 w-3" />
+    {lead.provider_user_id} {/* ✅ Use snake_case */}
+    <Badge variant="secondary" className="text-xs">
+      {lead.provider}
+    </Badge>
+  </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={scoreStyling.variant}
+                      className={`text-xs font-medium flex items-center gap-1 ${scoreStyling.className}`}
+                    >
+                      <ScoreIcon className="h-3 w-3" />
+                      {scoreStyling.label}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {new Date(lead.created_at).toLocaleDateString()}
+                    </Badge>
                   </div>
                 </div>
-                <Badge variant="outline">
-                  {new Date(lead.created_at).toLocaleDateString()}
-                </Badge>
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>

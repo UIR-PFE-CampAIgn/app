@@ -37,13 +37,50 @@ import {
   Eye,
   Trash2,
   TrendingUp,
+  Star,
+  Flame,
+  Snowflake,
 } from "lucide-react";
 import { useCampaigns, useCampaignLogs } from "@/lib/hooks/use-campaigns";
 import { useCampaignDialog } from "@/lib/hooks/use-campaign-dialog";
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { campaignService } from "@/lib/services/campaign.service";
-import { useLeads } from "@/lib/hooks/use-leads";
 import { Checkbox } from "@/components/ui/checkbox";
+
+// Helper function to get score styling
+const getScoreStyling = (score: string) => {
+  switch (score.toLowerCase()) {
+    case 'hot':
+      return {
+        variant: 'destructive' as const,
+        className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
+        icon: Flame,
+        label: 'Hot Lead'
+      };
+    case 'warm':
+      return {
+        variant: 'default' as const,
+        className: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200',
+        icon: Star,
+        label: 'Warm Lead'
+      };
+    case 'cold':
+      return {
+        variant: 'secondary' as const,
+        className: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+        icon: Snowflake,
+        label: 'Cold Lead'
+      };
+    default:
+      return {
+        variant: 'outline' as const,
+        className: 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200',
+        icon: Star,
+        label: 'Unknown'
+      };
+  }
+};
+
 export default function CampaignsPage() {
   const {
     campaigns,
@@ -65,23 +102,18 @@ export default function CampaignsPage() {
     validate,
     reset,
     prepareDto,
+    toggleScore,
+    selectAllScores,
+    clearScores,
   } = useCampaignDialog();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const { leads, loading: leadsLoading, fetchLeads, searchLeads } = useLeads();
   const [isCancelOpen, setIsCancelOpen] = useState(false);
 const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: string; name: string } | null>(null);
-
-const [leadSearchTerm, setLeadSearchTerm] = useState("");
   const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(selectedCampaignId);
-  useEffect(() => {
-    if (isCreateOpen) {
-      fetchLeads();
-    }
-  }, [isCreateOpen, fetchLeads]);
   // Load data on mount
   useEffect(() => {
     fetchCampaigns();
@@ -353,6 +385,27 @@ const [leadSearchTerm, setLeadSearchTerm] = useState("");
                         )}
                       </div>
 
+                      {/* Target Scores Display */}
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-sm text-slate-600">Targeting:</span>
+                        <div className="flex gap-1 flex-wrap">
+                          {campaign.target_leads?.map((score) => {
+                            const scoreStyling = getScoreStyling(score);
+                            const ScoreIcon = scoreStyling.icon;
+                            return (
+                              <Badge
+                                key={score}
+                                variant={scoreStyling.variant}
+                                className={`text-xs px-2 py-1 flex items-center gap-1 ${scoreStyling.className}`}
+                              >
+                                <ScoreIcon className="h-3 w-3" />
+                                {score}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Progress Bar */}
                       {(campaign.status === "running" || campaign.status === "completed") && (
                         <div className="space-y-2">
@@ -524,86 +577,83 @@ const [leadSearchTerm, setLeadSearchTerm] = useState("");
                 <p className="text-sm text-red-500">{errors.scheduled_date}</p>
               )}
 
-              {/* Recipients Section - Replace existing one */}
+              {/* Target Scores Section */}
 <div className="space-y-2">
-  <Label>Target Recipients</Label>
+  <Label>Target Lead Scores</Label>
+  <p className="text-sm text-slate-500">
+    Select which lead scores to target for this campaign
+  </p>
   
-  {/* Search Leads */}
-  <div className="relative">
-    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-    <Input
-      placeholder="Search leads..."
-      value={leadSearchTerm}
-      onChange={(e) => {
-        setLeadSearchTerm(e.target.value);
-        searchLeads(e.target.value);
-      }}
-      className="pl-10"
-    />
+  {/* Score Selection */}
+  <div className="grid grid-cols-3 gap-3">
+    {['hot', 'warm', 'cold'].map((score) => {
+      const scoreStyling = getScoreStyling(score);
+      const ScoreIcon = scoreStyling.icon;
+      const isSelected = formData.target_leads.includes(score as "hot" | "warm" | "cold");
+      
+      return (
+        <div
+          key={score}
+          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+            isSelected 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-slate-200 hover:bg-slate-50'
+          }`}
+          onClick={() => toggleScore(score as "hot" | "warm" | "cold")}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => toggleScore(score as "hot" | "warm" | "cold")}
+          />
+          <div className="flex items-center gap-2">
+            <ScoreIcon className="h-4 w-4" />
+            <span className="font-medium text-sm capitalize">{score}</span>
+          </div>
+        </div>
+      );
+    })}
   </div>
 
-  {/* Leads List */}
-  <div className="border rounded-lg max-h-60 overflow-y-auto">
-    {leadsLoading ? (
-      <div className="p-4 text-center text-sm text-slate-500">
-        Loading leads...
-      </div>
-    ) : leads.length === 0 ? (
-      <div className="p-4 text-center text-sm text-slate-500">
-        No leads found
-      </div>
-    ) : (
-      <div className="divide-y">
-        {leads.map((lead) => (
-  <div
-    key={lead.id}
-    className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer"
-    onClick={() => {
-      const current = formData.target_leads;
-      const newLeads = current.includes(lead.provider_user_id)
-        ? current.filter(phone => phone !== lead.provider_user_id)
-        : [...current, lead.provider_user_id];
-      setFormData({ ...formData, target_leads: newLeads });
-    }}
-  >
-    <Checkbox
-      checked={formData.target_leads.includes(lead.provider_user_id)}
-      onCheckedChange={() => {
-        const current = formData.target_leads;
-        const newLeads = current.includes(lead.provider_user_id)
-          ? current.filter(phone => phone !== lead.provider_user_id)
-          : [...current, lead.provider_user_id];
-        setFormData({ ...formData, target_leads: newLeads });
-      }}
-    />
-    <div className="flex-1 min-w-0">
-      <p className="font-medium text-sm truncate">
-        {lead.display_name || lead.provider_user_id}
-      </p>
-      <p className="text-xs text-slate-500">
-        📞 {lead.provider_user_id} • {lead.provider}
-      </p>
-    </div>
-  </div>
-))}
-
-      </div>
-    )}
+  {/* Quick Actions */}
+  <div className="flex gap-2">
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => selectAllScores(['hot', 'warm', 'cold'])}
+    >
+      Select All
+    </Button>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={clearScores}
+    >
+      Clear All
+    </Button>
   </div>
 
   {/* Selection Summary */}
   <div className="flex items-center justify-between text-sm">
     <span className="text-slate-600">
-      {formData.target_leads.length} recipient(s) selected
+      {formData.target_leads.length} score type(s) selected
     </span>
     {formData.target_leads.length > 0 && (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setFormData({ ...formData, target_leads: [] })}
-      >
-        Clear All
-      </Button>
+      <div className="flex gap-1">
+        {formData.target_leads.map((score) => {
+          const scoreStyling = getScoreStyling(score);
+          const ScoreIcon = scoreStyling.icon;
+          return (
+            <Badge
+              key={score}
+              variant={scoreStyling.variant}
+              className={`text-xs px-2 py-1 flex items-center gap-1 ${scoreStyling.className}`}
+            >
+              <ScoreIcon className="h-3 w-3" />
+              {score}
+            </Badge>
+          );
+        })}
+      </div>
     )}
   </div>
 

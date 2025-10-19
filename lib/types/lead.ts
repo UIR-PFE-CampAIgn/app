@@ -3,6 +3,7 @@ export interface Lead {
     provider: string;
     provider_user_id: string;
     display_name?: string; 
+    score?: string;
     created_at: string; 
   }
   
