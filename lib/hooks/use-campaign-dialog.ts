@@ -74,21 +74,23 @@ const validate = (): boolean => {
   };
 
   // ✅ toggle by score
-  const toggleScore = (score: string) => {
+  const toggleScore = (score: "hot" | "warm" | "cold") => {
     setSelectedScores(prev => {
       const newSelected = prev.includes(score)
         ? prev.filter(s => s !== score)
         : [...prev, score];
-
-      setFormData({ ...formData, target_leads: newSelected });
+  
+      setFormData({ ...formData, target_leads: newSelected as ("hot" | "warm" | "cold")[] });
       return newSelected;
     });
   };
+  
 
-  const selectAllScores = (scores: string[]) => {
+  const selectAllScores = (scores: ("hot" | "warm" | "cold")[]) => {
     setSelectedScores(scores);
     setFormData({ ...formData, target_leads: scores });
   };
+  
 
   const clearScores = () => {
     setSelectedScores([]);
