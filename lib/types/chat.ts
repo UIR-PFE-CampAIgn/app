@@ -3,6 +3,7 @@ export interface Chat {
     lead_id: string;
     lead_name?: string;
     lead_phone?: string;
+    lead_score?: string;
     business_social_media_id: string;
     status: 'open' | 'closed' | 'archived';
     running_summary?: string;

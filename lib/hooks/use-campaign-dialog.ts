@@ -13,10 +13,10 @@ export function useCampaignDialog() {
     schedule_type: 'immediate',
     scheduled_date: '',
     scheduled_time: '',
-    target_leads: [], // will now store phone numbers
+    target_leads: [], // will store score values only
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [selectedScores, setSelectedScores] = useState<string[]>([]);
 
 
 const validate = (): boolean => {
@@ -54,7 +54,7 @@ const validate = (): boolean => {
       scheduled_time: '',
       target_leads: [],
     });
-    setSelectedLeads([]);
+    setSelectedScores([]);
     setErrors({});
   };
 
@@ -63,7 +63,7 @@ const validate = (): boolean => {
       name: formData.name,
       template_id: formData.template_id,
       schedule_type: formData.schedule_type,
-      target_leads: formData.target_leads, // phone numbers
+      target_leads: formData.target_leads, // score values only
     };
 
     if (formData.schedule_type === 'scheduled' && formData.scheduled_date && formData.scheduled_time) {
@@ -73,25 +73,27 @@ const validate = (): boolean => {
     return dto;
   };
 
-  // ✅ toggle by phone instead of ID
-  const toggleLead = (phone: string) => {
-    setSelectedLeads(prev => {
-      const newSelected = prev.includes(phone)
-        ? prev.filter(p => p !== phone)
-        : [...prev, phone];
-
-      setFormData({ ...formData, target_leads: newSelected });
+  // ✅ toggle by score
+  const toggleScore = (score: "hot" | "warm" | "cold") => {
+    setSelectedScores(prev => {
+      const newSelected = prev.includes(score)
+        ? prev.filter(s => s !== score)
+        : [...prev, score];
+  
+      setFormData({ ...formData, target_leads: newSelected as ("hot" | "warm" | "cold")[] });
       return newSelected;
     });
   };
+  
 
-  const selectAllLeads = (phones: string[]) => {
-    setSelectedLeads(phones);
-    setFormData({ ...formData, target_leads: phones });
+  const selectAllScores = (scores: ("hot" | "warm" | "cold")[]) => {
+    setSelectedScores(scores);
+    setFormData({ ...formData, target_leads: scores });
   };
+  
 
-  const clearLeads = () => {
-    setSelectedLeads([]);
+  const clearScores = () => {
+    setSelectedScores([]);
     setFormData({ ...formData, target_leads: [] });
   };
 
@@ -104,9 +106,9 @@ const validate = (): boolean => {
     validate,
     reset,
     prepareDto,
-    selectedLeads,
-    toggleLead,
-    selectAllLeads,
-    clearLeads,
+    selectedScores,
+    toggleScore,
+    selectAllScores,
+    clearScores,
   };
 }

@@ -7,11 +7,45 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Search, Filter, MessageCircle, Phone, ArrowUpRight, Send, MoreVertical, Clock, CheckCheck,
+  Search, Filter, MessageCircle, Phone, ArrowUpRight, Send, MoreVertical, Clock, CheckCheck, Star, Flame, Snowflake,
 } from "lucide-react";
 import { useChats } from "@/lib/hooks/use-chats";
 import { useChatMessages } from "@/lib/hooks/use-chat-messages";
 import { Chat, Message } from "@/lib/types/chat";
+
+// Helper function to get score styling
+const getScoreStyling = (score?: string) => {
+  switch (score?.toLowerCase()) {
+    case 'hot':
+      return {
+        variant: 'destructive' as const,
+        className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
+        icon: Flame,
+        label: 'Hot Lead'
+      };
+    case 'warm':
+      return {
+        variant: 'default' as const,
+        className: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200',
+        icon: Star,
+        label: 'Warm Lead'
+      };
+    case 'cold':
+      return {
+        variant: 'secondary' as const,
+        className: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
+        icon: Snowflake,
+        label: 'Cold Lead'
+      };
+    default:
+      return {
+        variant: 'outline' as const,
+        className: 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200',
+        icon: Star,
+        label: 'Unscored'
+      };
+  }
+};
 
 export default function InboxPage() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
@@ -180,69 +214,81 @@ const formatMessageDate = (timestamp: string) => {
             </div>
           )}
 
-          {filteredChats.map((chat) => (
-            <div
-              key={chat._id}
-              onClick={() => setSelectedChat(chat)}
-              className={`p-4 border-b border-slate-100 cursor-pointer transition-all hover:bg-slate-50 relative ${
-                selectedChat?._id === chat._id
-                  ? "bg-blue-50/50 border-l-3 border-l-blue-500"
-                  : ""
-              }`}
-            >
-              <div className="flex gap-3">
-                <div className="relative">
-                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.lead_name}`}
-                    />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                      {chat.lead_name?.[0] || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  {chat.unread_count && chat.unread_count > 0 && (
-                    <div className="absolute -top-1 -right-1 h-5 w-5 bg-rose-500 rounded-full flex items-center justify-center text-xs text-white font-medium shadow-lg">
-                      {chat.unread_count}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-semibold text-slate-900 truncate">
-                      {chat.lead_name || 'Unknown'}
-                    </h4>
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatMessageTime(chat.last_message?.created_at || chat.created_at)}
-                    </span>
+          {filteredChats.map((chat) => {
+            const scoreStyling = getScoreStyling(chat.lead_score);
+            const ScoreIcon = scoreStyling.icon;
+            
+            return (
+              <div
+                key={chat._id}
+                onClick={() => setSelectedChat(chat)}
+                className={`p-4 border-b border-slate-100 cursor-pointer transition-all hover:bg-slate-50 relative ${
+                  selectedChat?._id === chat._id
+                    ? "bg-blue-50/50 border-l-3 border-l-blue-500"
+                    : ""
+                }`}
+              >
+                <div className="flex gap-3">
+                  <div className="relative">
+                    <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                      <AvatarImage
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.lead_name}`}
+                      />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                        {chat.lead_name?.[0] || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {chat.unread_count && chat.unread_count > 0 && (
+                      <div className="absolute -top-1 -right-1 h-5 w-5 bg-rose-500 rounded-full flex items-center justify-center text-xs text-white font-medium shadow-lg">
+                        {chat.unread_count}
+                      </div>
+                    )}
                   </div>
-                  
-                  <p className="text-sm text-slate-600 truncate mb-2">
-                    {chat.last_message?.text || 'No messages yet'}
-                  </p>
-                  
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge
-                      variant={
-                        chat.status === "open"
-                          ? "default"
-                          : chat.status === "archived"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                      className="text-xs px-2 py-0.5 h-5"
-                    >
-                      {chat.status}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs px-2 py-0.5 h-5">
-                      {chat.message_count} msgs
-                    </Badge>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-semibold text-slate-900 truncate">
+                        {chat.lead_name || 'Unknown'}
+                      </h4>
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatMessageTime(chat.last_message?.created_at || chat.created_at)}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-slate-600 truncate mb-2">
+                      {chat.last_message?.text || 'No messages yet'}
+                    </p>
+                    
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge
+                        variant={
+                          chat.status === "open"
+                            ? "default"
+                            : chat.status === "archived"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                        className="text-xs px-2 py-0.5 h-5"
+                      >
+                        {chat.status}
+                      </Badge>
+                      <Badge 
+                        variant={scoreStyling.variant}
+                        className={`text-xs px-2 py-0.5 h-5 flex items-center gap-1 ${scoreStyling.className}`}
+                      >
+                        <ScoreIcon className="h-3 w-3" />
+                        {scoreStyling.label}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs px-2 py-0.5 h-5">
+                        {chat.message_count} msgs
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -263,9 +309,24 @@ const formatMessageDate = (timestamp: string) => {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-slate-900 text-lg">
-                      {selectedChat.lead_name || 'Unknown'}
-                    </h3>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-semibold text-slate-900 text-lg">
+                        {selectedChat.lead_name || 'Unknown'}
+                      </h3>
+                      {(() => {
+                        const scoreStyling = getScoreStyling(selectedChat.lead_score);
+                        const ScoreIcon = scoreStyling.icon;
+                        return (
+                          <Badge 
+                            variant={scoreStyling.variant}
+                            className={`text-xs px-2 py-1 flex items-center gap-1 ${scoreStyling.className}`}
+                          >
+                            <ScoreIcon className="h-3 w-3" />
+                            {scoreStyling.label}
+                          </Badge>
+                        );
+                      })()}
+                    </div>
                     <div className="flex items-center gap-3 text-sm text-slate-500">
                       <span className="flex items-center gap-1">
                         <Phone className="h-3.5 w-3.5" />

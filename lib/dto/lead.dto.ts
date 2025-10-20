@@ -4,6 +4,7 @@ export class LeadDTO {
   provider: string;
   providerUserId: string;
   displayName?: string;
+  score?: string;
   createdAt: string;
 
   constructor(params: {
@@ -11,12 +12,14 @@ export class LeadDTO {
     provider: string;
     providerUserId: string;
     displayName?: string;
+    score?: string;
     createdAt?: string;
   }) {
     this.id = params.id;
     this.provider = params.provider;
     this.providerUserId = params.providerUserId;
     this.displayName = params.displayName;
+    this.score = params.score;
     this.createdAt = params.createdAt ?? new Date().toISOString();
   }
 }
