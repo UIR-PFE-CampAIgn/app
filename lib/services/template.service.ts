@@ -1,4 +1,3 @@
-// lib/services/template.service.ts
 import { templatesApi } from '@/lib/api/templates';
 import { MessageTemplate, CreateTemplateDto, UpdateTemplateDto } from '@/lib/types/template';
 import { 
@@ -15,16 +14,30 @@ class TemplateService {
     return Array.from(new Set(Array.from(matches, m => m[1])));
   }
 
-  async getAll(filters?: { category?: string; search?: string }): Promise<MessageTemplate[]> {
+  async getAll(filters: { 
+    businessId: string;
+    category?: string; 
+    search?: string;
+  }): Promise<MessageTemplate[]> {
+    // Validate businessId is present
+    if (!filters.businessId) {
+      throw new Error('Business ID is required.');
+    }
+
     // ✅ Use safeParse to avoid throwing
-    const validation = templateQuerySchema.safeParse(filters || {});
+    const validation = templateQuerySchema.safeParse(filters);
 
     if (!validation.success) {
       console.error('Invalid filters:', validation.error.flatten());
       throw new Error('Invalid filter parameters.');
     }
+
     try {
-      const templates = await templatesApi.getAll(validation.data);
+      // Pass businessId along with validated data
+      const templates = await templatesApi.getAll({
+        ...validation.data,
+        businessId: filters.businessId
+      });
       return templates;
     } catch (error) {
       console.error('Failed to fetch templates:', error);
@@ -33,6 +46,11 @@ class TemplateService {
   }
 
   async create(data: CreateTemplateDto): Promise<MessageTemplate> {
+    // Validate business_id is present
+    if (!data.business_id) {
+      throw new Error('Business ID is required.');
+    }
+
     // ✅ Use safeParse instead of parse
     const validation = createTemplateSchema.safeParse(data);
 
@@ -40,9 +58,12 @@ class TemplateService {
       console.error('Invalid template data:', validation.error.flatten());
       throw new Error('Invalid template data.');
     }
-
+    
     try {
-      const template = await templatesApi.create(validation.data);
+      const template = await templatesApi.create({
+        ...validation.data,
+        business_id: data.business_id,
+      });
       return template;
     } catch (error) {
       console.error('Failed to create template:', error);
@@ -51,6 +72,7 @@ class TemplateService {
   }
 
   async update(id: string, data: UpdateTemplateDto): Promise<MessageTemplate> {
+   
     // ✅ Use safeParse here too
     const validation = updateTemplateSchema.safeParse(data);
 

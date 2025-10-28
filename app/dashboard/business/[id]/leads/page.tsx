@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Filter, Phone, Star, Flame, Snowflake } from "lucide-react";
 import { useLeads } from "@/lib/hooks/use-leads";
+import { useBusiness } from "@/app/contexts/BusinessContext";
 
 // Helper function to get score styling
 const getScoreStyling = (score?: string) => {
@@ -45,15 +46,24 @@ const getScoreStyling = (score?: string) => {
 
 export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const { leads, loading, error, fetchLeads, searchLeads } = useLeads();
+  
+  // Get businessId from context
+  const { businessId } = useBusiness();
+  console.log(businessId,"business")
+  // Pass businessId to useLeads hook
+  const { leads, loading, error, fetchLeads, searchLeads } = useLeads(businessId);
 
   // Load leads on mount
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    if (businessId) {
+      fetchLeads();
+    }
+  }, [fetchLeads, businessId]);
 
   // Handle search with debounce
   useEffect(() => {
+    if (!businessId) return;
+    
     const timer = setTimeout(() => {
       if (searchTerm) {
         searchLeads(searchTerm);
@@ -63,7 +73,20 @@ export default function LeadsPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, searchLeads, fetchLeads]);
+  }, [searchTerm, searchLeads, fetchLeads, businessId]);
+
+  // No businessId state
+  if (!businessId) {
+    return (
+      <div className="p-8">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-slate-600">No business selected</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading && leads.length === 0) {
@@ -157,28 +180,28 @@ export default function LeadsPage() {
                       <AvatarImage
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.display_name || lead.provider_user_id}`}
                       />
-                     <AvatarFallback>
-    {lead.display_name
-      ? lead.display_name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2)
-      : (lead.provider_user_id || 'UK').substring(0, 2).toUpperCase()} {/* ✅ Fixed */}
-  </AvatarFallback>
+                      <AvatarFallback>
+                        {lead.display_name
+                          ? lead.display_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)
+                          : (lead.provider_user_id || 'UK').substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                    <h3 className="font-semibold">
-    {lead.display_name || "Unknown"}
-  </h3>
-  <div className="flex items-center text-sm text-muted-foreground gap-2">
-    <Phone className="h-3 w-3" />
-    {lead.provider_user_id} {/* ✅ Use snake_case */}
-    <Badge variant="secondary" className="text-xs">
-      {lead.provider}
-    </Badge>
-  </div>
+                      <h3 className="font-semibold">
+                        {lead.display_name || "Unknown"}
+                      </h3>
+                      <div className="flex items-center text-sm text-muted-foreground gap-2">
+                        <Phone className="h-3 w-3" />
+                        {lead.provider_user_id}
+                        <Badge variant="secondary" className="text-xs">
+                          {lead.provider}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

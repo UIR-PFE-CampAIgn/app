@@ -14,16 +14,16 @@ export const createCampaignSchema = z.object({
   }),
     
   scheduled_at: z.string()
-    .datetime("Invalid date format")
-    .optional()
-    .refine(
-      (val) => {
-        if (!val) return true;
-        const date = new Date(val);
-        return date > new Date();
-      },
-      { message: "Scheduled date must be in the future" }
-    ),
+  .optional()
+  .refine(
+    (val) => {
+      if (!val) return true;
+      // Accept both "2025-10-27T16:00" and "2025-10-27T16:00:00.000Z"
+      const date = new Date(val);
+      return !isNaN(date.getTime()) && date > new Date();
+    },
+    { message: "Scheduled date must be a valid date in the future" }
+  ),
     
   cron_expression: z.string()
     .optional()
