@@ -4,15 +4,25 @@ import { leadsArraySchema, leadQuerySchema } from '@/lib/validators/lead.validat
 
 class LeadService {
   
-  async getAll(params?: GetLeadsParams): Promise<Lead[]> {
+  async getAll(params: GetLeadsParams): Promise<Lead[]> {
+    // Validate businessId is present
+    if (!params.businessId) {
+      throw new Error('Business ID is required.');
+    }
+
     // Validate query params
-    const validation = leadQuerySchema.safeParse(params || {});
+    const validation = leadQuerySchema.safeParse(params);
     if (!validation.success) {
       console.error('Invalid query params:', validation.error.flatten());
       throw new Error('Invalid search parameters.');
     }    
+    
     try {
-      const rawLeads = await leadsApi.getAll(validation.data);
+      // Pass businessId along with validated data
+      const rawLeads = await leadsApi.getAll({
+        ...validation.data,
+        businessId: params.businessId
+      });
       
       // Validate response data
       const leadsValidation = leadsArraySchema.safeParse(rawLeads);
@@ -40,13 +50,16 @@ class LeadService {
     }
   }
 
-  async search(searchTerm: string): Promise<Lead[]> {
-    if (!searchTerm.trim()) {
-      return this.getAll();
+  async search(params: { searchTerm: string; businessId: string }): Promise<Lead[]> {
+    if (!params.searchTerm.trim()) {
+      return this.getAll({ businessId: params.businessId });
     }
 
     try {
-      const leads = await leadsApi.getAll({ search: searchTerm });
+      const leads = await this.getAll({ 
+        search: params.searchTerm,
+        businessId: params.businessId
+      });
       return leads;
     } catch (error) {
       console.error('Failed to search leads:', error);
@@ -69,8 +82,6 @@ class LeadService {
     }
     return (lead.provider_user_id || 'UK').substring(0, 2).toUpperCase();
   }
-
-  
 }
 
 export const leadService = new LeadService();

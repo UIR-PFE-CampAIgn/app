@@ -1,10 +1,17 @@
+// lib/api/templates.ts
 import { apiClient } from './axios-instance';
 import { MessageTemplate, CreateTemplateDto, UpdateTemplateDto } from '@/lib/types/template';
 
 export const templatesApi = {
-  async getAll(params?: { category?: string; search?: string }): Promise<MessageTemplate[]> {
-    const searchParams: Record<string, string> = {};
-    
+  async getAll(params: { 
+    category?: string; 
+    search?: string; 
+    businessId: string; 
+  }): Promise<MessageTemplate[]> {
+    const searchParams: Record<string, string> = {
+      businessId: params.businessId
+    };
+
     if (params?.category && params.category !== 'all') {
       searchParams.category = params.category;
     }

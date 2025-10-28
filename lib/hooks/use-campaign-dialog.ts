@@ -60,16 +60,20 @@ const validate = (): boolean => {
 
   const prepareDto = (): CreateCampaignDto => {
     const dto: CreateCampaignDto = {
-      name: formData.name,
       template_id: formData.template_id,
+      name: formData.name,
       schedule_type: formData.schedule_type,
-      target_leads: formData.target_leads, // score values only
+      target_leads: formData.target_leads,
     };
-
-    if (formData.schedule_type === 'scheduled' && formData.scheduled_date && formData.scheduled_time) {
-      dto.scheduled_at = `${formData.scheduled_date}T${formData.scheduled_time}:00Z`;
+  
+    // ✅ Combine date + time into a single datetime string (user's local time)
+    if (formData.schedule_type === 'scheduled') {
+      if (formData.scheduled_date && formData.scheduled_time) {
+        // Combine into local datetime string: "2025-10-27T16:00"
+        dto.scheduled_at = `${formData.scheduled_date}T${formData.scheduled_time}`;
+      }
     }
-
+  
     return dto;
   };
 

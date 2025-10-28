@@ -48,6 +48,7 @@ import {
   Calendar,
   Sparkles,
 } from "lucide-react";
+import { useBusiness } from "@/app/contexts/BusinessContext"; // Add this import
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { useTemplateFilters } from "@/lib/hooks/use-template-filters";
 import { useTemplateDialog } from "@/lib/hooks/use-template-dialog";
@@ -62,17 +63,23 @@ const templateFormSchema = z.object({
   content: z.string().min(1, "Content is required").max(5000, "Content too long"),
   category: z.enum(["onboarding", "transactional", "follow-up", "promotional", "general"]),
   language: z.string().min(2, "Language is required"),
+  business_id: z.string().min(1, "Business ID is required"), // Add this
+
 });
 
 
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
-const defaultValues: TemplateFormValues = {
-  name: "",
-  content: "",
-  category: "general",
-  language: "EN",
-};
+
 export default function MessageTemplatesPage() {
+  const { businessId } = useBusiness();
+  const defaultValues: TemplateFormValues = {
+    name: "",
+    content: "",
+    category: "general",
+    language: "EN",
+    business_id: businessId || "", // Use businessId from context
+  
+  };
   const {
     templates,
     loading,
@@ -109,9 +116,17 @@ export default function MessageTemplatesPage() {
   });
   useEffect(() => {
     if (isCreateOpen) {
-      form.reset(defaultValues);
+      form.reset({
+        ...defaultValues,
+        business_id: businessId || "",
+      });
     }
-  }, [isCreateOpen, form]);
+  }, [isCreateOpen, businessId]);
+  useEffect(() => {
+    if (businessId) {
+      form.setValue("business_id", businessId);
+    }
+  }, [businessId, form]);
   useEffect(() => {
     if (isEditOpen && selectedTemplate) {
       form.reset({
@@ -119,10 +134,10 @@ export default function MessageTemplatesPage() {
         content: selectedTemplate.content,
         category: selectedTemplate.category,
         language: selectedTemplate.language,
+        business_id: businessId || selectedTemplate.business_id,
       });
     }
-  }, [isEditOpen, selectedTemplate, form]);
-
+  }, [isEditOpen, selectedTemplate, businessId]);
   // 3️⃣ When any dialog closes → reset to defaults
   useEffect(() => {
     if (!isCreateOpen && !isEditOpen && !isDeleteOpen) {
@@ -132,30 +147,41 @@ export default function MessageTemplatesPage() {
 
   // Load templates on mount
   useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
+    if (businessId) {
+      fetchTemplates({ businessId: businessId });
+    }
+  }, [businessId, fetchTemplates]);
 
   const extractVariables = (content: string): string[] => {
     return templateService.extractVariables(content);
   };
 
   const handleCreate = async (values: TemplateFormValues) => {
+    if (!businessId) {
+      toast.error("Business ID is required");
+      return;
+    }
+
     try {
-      await createTemplate(values);
+      await createTemplate({
+        ...values,
+        business_id: businessId, // Ensure business_id is included
+      });
       closeDialogs();
       form.reset();
       toast.success("Template created successfully");
-
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create template");
-
     }
   };
 
   const handleEdit = async (values: TemplateFormValues) => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || !businessId) return;
+    
     try {
-      await updateTemplate(selectedTemplate.id, values);
+      await updateTemplate(selectedTemplate.id, {
+        ...values,
+      });
       closeDialogs();
       form.reset();
       toast.success("Template updated successfully");
@@ -190,16 +216,23 @@ export default function MessageTemplatesPage() {
     // Validate searchTerm is not empty or whitespace only
     const trimmedSearch = searchTerm.trim();
     
-    fetchTemplates({
-      search: trimmedSearch || undefined,
-      category: categoryFilter !== 'all' ? categoryFilter : undefined,
-    });
+    if (businessId) {
+      fetchTemplates({
+        search: trimmedSearch || undefined,
+        category: categoryFilter !== 'all' ? categoryFilter : undefined,
+        businessId
+      });
+    }
   };
 
   const handleCategoryChange = (category: string) => {
     setCategoryFilter(category);
     const trimmedSearch = searchTerm.trim();
+    
+    if (!businessId) return;
+    
     fetchTemplates({
+      businessId: businessId,
       search: trimmedSearch || undefined,
       category: category !== 'all' ? category : undefined,
     });
@@ -299,14 +332,19 @@ export default function MessageTemplatesPage() {
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-700 text-sm">{error}</p>
-            <Button 
-              onClick={() => fetchTemplates()} 
-              variant="outline" 
-              size="sm" 
-              className="mt-2"
-            >
-              Retry
-            </Button>
+            <Button
+  onClick={() => {
+    if (businessId) {
+      fetchTemplates({ businessId });
+    }
+  }}
+  variant="outline"
+  size="sm"
+  className="mt-2"
+>
+  Retry
+</Button>
+
           </div>
         )}
 
