@@ -19,8 +19,9 @@ export const useBusinesses = (): UseBusinessesReturn => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { userId } = useUser();
-
+  const { user } = useUser();
+  const userId = user?.appUserData?.user_id; // from your backend DB
+  
 
 
 

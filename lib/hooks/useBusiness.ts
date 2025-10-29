@@ -14,8 +14,9 @@ export const useBusiness = (id: string): UseBusinessReturn => {
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { userId } = useUser();
- 
+  const { user } = useUser();
+  const userId = user?.appUserData?.user_id; // from your backend DB
+   
   const fetchBusiness = useCallback(async () => {
     if (!id || !userId) return;
     try {
@@ -29,7 +30,7 @@ export const useBusiness = (id: string): UseBusinessReturn => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, userId]);
 
   
 
