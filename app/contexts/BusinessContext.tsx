@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface BusinessContextType {
   businessId: string | null;
@@ -16,13 +16,6 @@ export function BusinessProvider({
   initialBusinessId?: string;
 }) {
   const [businessId, setBusinessId] = useState<string | null>(initialBusinessId || null);
-
-  useEffect(() => {
-    if (initialBusinessId) {
-      localStorage.setItem('businessId', initialBusinessId);
-    }
-  }, [initialBusinessId]);
-
   return (
     <BusinessContext.Provider value={{ businessId, setBusinessId }}>
       {children}
