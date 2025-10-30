@@ -51,7 +51,7 @@ export default function LeadsPage() {
   const { businessId } = useBusiness();
   console.log(businessId,"business")
   // Pass businessId to useLeads hook
-  const { leads, loading, error, fetchLeads, searchLeads } = useLeads(businessId);
+  const { leads, loading, error, fetchLeads, searchLeads } = useLeads(businessId ?? "");
 
   // Load leads on mount
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -72,14 +72,13 @@ type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
 export default function MessageTemplatesPage() {
   const { businessId } = useBusiness();
-  const defaultValues: TemplateFormValues = {
+  const defaultValues = useMemo<TemplateFormValues>(() => ({
     name: "",
     content: "",
     category: "general",
     language: "EN",
-    business_id: businessId || "", // Use businessId from context
-  
-  };
+    business_id: businessId || "",
+  }), [businessId]);
   const {
     templates,
     loading,
@@ -121,7 +120,7 @@ export default function MessageTemplatesPage() {
         business_id: businessId || "",
       });
     }
-  }, [isCreateOpen, businessId]);
+  }, [isCreateOpen, businessId, defaultValues, form]);
   useEffect(() => {
     if (businessId) {
       form.setValue("business_id", businessId);
@@ -137,13 +136,13 @@ export default function MessageTemplatesPage() {
         business_id: businessId || selectedTemplate.business_id,
       });
     }
-  }, [isEditOpen, selectedTemplate, businessId]);
+  }, [isEditOpen, selectedTemplate, businessId, form]);
   // 3️⃣ When any dialog closes → reset to defaults
   useEffect(() => {
     if (!isCreateOpen && !isEditOpen && !isDeleteOpen) {
       form.reset(defaultValues);
     }
-  }, [isCreateOpen, isEditOpen, isDeleteOpen, form]);
+  }, [isCreateOpen, isEditOpen, isDeleteOpen, defaultValues, form]);
 
   // Load templates on mount
   useEffect(() => {

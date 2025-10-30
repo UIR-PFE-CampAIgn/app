@@ -64,12 +64,12 @@ export default function InboxPage() {
   // Fetch chats on mount and when filters change
   useEffect(() => {
     fetchChats({
-      businessId: businessId,
+      businessId: businessId || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
       search: searchTerm || undefined,
       limit: 50,
     });
-  }, [fetchChats, statusFilter,searchTerm]);
+  }, [fetchChats, statusFilter, searchTerm, businessId]);
 
   // Fetch messages when chat is selected
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function InboxPage() {
     const timer = setTimeout(() => {
       if (searchTerm) {
         fetchChats({
-          businessId: businessId,
+          businessId: businessId || undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           search: searchTerm,
         });
@@ -91,7 +91,7 @@ export default function InboxPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter, fetchChats]);
+  }, [searchTerm, statusFilter, fetchChats, businessId]);
 
   const filteredChats = chats;
 

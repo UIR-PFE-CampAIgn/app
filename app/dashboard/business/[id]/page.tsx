@@ -38,7 +38,7 @@ import {
 import Link from "next/link";
 import { useBusiness } from "@/lib/hooks/useBusiness";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { useTemplateDialog } from "@/lib/hooks/use-template-dialog";
 import { ALLOWED_VARIABLE_KEYS, ALLOWED_VARIABLES } from "@/lib/constants/template-variables";
@@ -69,9 +69,9 @@ export default function BusinessDetailPage() {
     router.push(`/dashboard/business/${business?._id}/settings`);
   };
   // Default welcome message
-  const getDefaultWelcomeMessage = () => {
+  const getDefaultWelcomeMessage = useCallback(() => {
     return `Hello! 👋\n\nWelcome to ${business?.name}! We're excited to have you here.\n\n${business?.description || "We're dedicated to providing you with the best service possible."}\n\nHow can we help you today? Feel free to ask any questions, and we'll get back to you right away!`;
-  };
+  }, [business]);
 
   // Open dialog handler
   const handleEditClick = () => {
@@ -95,10 +95,9 @@ export default function BusinessDetailPage() {
         setContent(getDefaultWelcomeMessage());
         setCategory("onboarding");
         setLanguage("EN");
-        
       }
     }
-  }, [isCreateOpen, isEditOpen, business]);
+  }, [isCreateOpen, isEditOpen, business, getDefaultWelcomeMessage]);
 
   // Reset form when dialog closes
   useEffect(() => {

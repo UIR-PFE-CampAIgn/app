@@ -120,9 +120,10 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
   const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(businessId,selectedCampaignId);
   // Load data on mount
   useEffect(() => {
+    if (!businessId) return; // Prevent calling APIs with null
     fetchCampaigns();
-    fetchTemplates({ businessId: businessId });
-    }, [fetchCampaigns, fetchTemplates]);
+    fetchTemplates({ businessId });
+  }, [fetchCampaigns, fetchTemplates, businessId]);
 
   // Filter campaigns
   const filteredCampaigns = campaigns.filter((campaign) => {
