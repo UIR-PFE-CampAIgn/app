@@ -82,6 +82,10 @@ export default function BusinessDetailPage() {
     }
   };
 
+  const handleCreateCampaign = () => {
+      router.push(`/dashboard/business/${business?._id}/campaigns?create=true`);
+  };
+
   // Initialize form when dialog opens
   useEffect(() => {
     if (isCreateOpen || isEditOpen) {
@@ -335,7 +339,7 @@ export default function BusinessDetailPage() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">No campaigns yet</p>
-                <Button variant="outline">Create Campaign</Button>
+                <Button variant="outline" onClick={handleCreateCampaign}>Create Campaign</Button>
               </div>
             )}
           </CardContent>
