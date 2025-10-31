@@ -48,7 +48,7 @@ export default function DashboardPage() {
   const { stats } = useDashboardStats();
 
   const handleAddBusiness = () => {
-    router.push(`/dashboard/business/`);
+    router.push(`/dashboard/business?create=true`);
   };
 
   const handleCreateCampaign = () => {
@@ -57,11 +57,12 @@ export default function DashboardPage() {
 
   const handleContinueToCampaign = () => {
     if (selectedBusiness) {
-      router.push(`/dashboard/business/${selectedBusiness}/campaigns`);
+      router.push(`/dashboard/business/${selectedBusiness}/campaigns?create=true`);
       setIsDialogOpen(false);
       setSelectedBusiness("");
     }
   };
+  
   const cards = [
     {
       title: "Total Businesses",

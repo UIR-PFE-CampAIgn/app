@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { CreateCampaignDto } from '@/lib/types/campaign';
 import { campaignFormSchema, CampaignFormInput } from '@/lib/validators/campaign.validator';
 import { ZodError } from "zod";
@@ -13,38 +14,49 @@ export function useCampaignDialog() {
     schedule_type: 'immediate',
     scheduled_date: '',
     scheduled_time: '',
-    target_leads: [], // will store score values only
+    target_leads: [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedScores, setSelectedScores] = useState<string[]>([]);
 
+  // 🔹 Handle `?create=true` query
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-const validate = (): boolean => {
-  try {
-    campaignFormSchema.parse(formData);
-    setErrors({});
-    return true;
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const newErrors: Record<string, string> = {};
+  useEffect(() => {
+    const createQuery = searchParams.get('create');
 
-      error.errors.forEach((err) => {
-        if (err.path) {
-          newErrors[err.path.join(".")] = err.message;
-        }
-      });
+    if (createQuery === 'true') {
+      setOpen(true);
 
-      setErrors(newErrors);
+      //  clean up URL after opening
+      const newUrl = pathname; // removes ?create=true
+      router.replace(newUrl);
+    }
+  }, [searchParams, router, pathname]);
+
+  // ✅ Validation
+  const validate = (): boolean => {
+    try {
+      campaignFormSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path) newErrors[err.path.join('.')] = err.message;
+        });
+        setErrors(newErrors);
+        return false;
+      }
+      console.error('Unexpected validation error:', error);
       return false;
     }
+  };
 
-    // In case it's an unexpected error type
-    console.error("Unexpected validation error:", error);
-    return false;
-  }
-};
-
-
+  // ✅ Reset
   const reset = () => {
     setFormData({
       name: '',
@@ -58,6 +70,7 @@ const validate = (): boolean => {
     setErrors({});
   };
 
+  // ✅ Prepare DTO
   const prepareDto = (): CreateCampaignDto => {
     const dto: CreateCampaignDto = {
       template_id: formData.template_id,
@@ -65,36 +78,31 @@ const validate = (): boolean => {
       schedule_type: formData.schedule_type,
       target_leads: formData.target_leads,
     };
-  
-    // ✅ Combine date + time into a single datetime string (user's local time)
+
     if (formData.schedule_type === 'scheduled') {
       if (formData.scheduled_date && formData.scheduled_time) {
-        // Combine into local datetime string: "2025-10-27T16:00"
         dto.scheduled_at = `${formData.scheduled_date}T${formData.scheduled_time}`;
       }
     }
-  
+
     return dto;
   };
 
-  // ✅ toggle by score
-  const toggleScore = (score: "hot" | "warm" | "cold") => {
+  // ✅ Score Toggles
+  const toggleScore = (score: 'hot' | 'warm' | 'cold') => {
     setSelectedScores(prev => {
       const newSelected = prev.includes(score)
         ? prev.filter(s => s !== score)
         : [...prev, score];
-  
-      setFormData({ ...formData, target_leads: newSelected as ("hot" | "warm" | "cold")[] });
+      setFormData({ ...formData, target_leads: newSelected as ('hot' | 'warm' | 'cold')[] });
       return newSelected;
     });
   };
-  
 
-  const selectAllScores = (scores: ("hot" | "warm" | "cold")[]) => {
+  const selectAllScores = (scores: ('hot' | 'warm' | 'cold')[]) => {
     setSelectedScores(scores);
     setFormData({ ...formData, target_leads: scores });
   };
-  
 
   const clearScores = () => {
     setSelectedScores([]);

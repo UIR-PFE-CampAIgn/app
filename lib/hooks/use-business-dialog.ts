@@ -1,6 +1,8 @@
-// lib/hooks/use-business-dialog.ts
-import { useState } from "react";
+'use client';
+
+import { useEffect, useState } from "react";
 import type { Business } from "../types/business";
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 interface UseBusinessDialogReturn {
   isCreateOpen: boolean;
@@ -19,6 +21,24 @@ export function useBusinessDialog(): UseBusinessDialogReturn {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // 🔹 Auto-open create dialog from ?create=true
+  useEffect(() => {
+    const createQuery = searchParams.get('create');
+
+    if (createQuery === 'true') {
+      openCreate();
+
+      // ✅ Clean up the URL to prevent reopening on refresh
+      const newUrl = pathname;
+      router.replace(newUrl);
+    }
+  }, [searchParams, router, pathname]);
+
+  // 🔹 Dialog control handlers
   const openCreate = () => {
     setSelectedBusiness(null);
     setIsCreateOpen(true);
@@ -44,7 +64,8 @@ export function useBusinessDialog(): UseBusinessDialogReturn {
     setIsCreateOpen(false);
     setIsEditOpen(false);
     setIsDeleteOpen(false);
-    // Small delay before clearing selected business to avoid UI flash
+
+    // Small delay to avoid UI flicker when closing animations
     setTimeout(() => setSelectedBusiness(null), 150);
   };
 
