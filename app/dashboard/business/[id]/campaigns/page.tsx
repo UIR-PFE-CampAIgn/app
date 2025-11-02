@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import BuinsessPage from './BuinsessPage';
+import CampaignsPage from './CampaignsPage';
 
 function LoadingSkeleton() {
   return (
@@ -12,10 +12,10 @@ function LoadingSkeleton() {
   );
 }
 
-export default function BusinessPage() {
+export default function CampaignPage() {
   return (
     <Suspense fallback={<LoadingSkeleton />}>
-      <BuinsessPage />
+      <CampaignsPage />
     </Suspense>
   );
 }

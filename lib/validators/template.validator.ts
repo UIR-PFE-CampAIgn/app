@@ -24,6 +24,8 @@ export const createTemplateSchema = z.object({
   language: z.string()
     .length(2, "Language code must be 2 characters")
     .toUpperCase(),
+  template_key: z.string().optional()
+
 });
 
 export const updateTemplateSchema = createTemplateSchema.partial();

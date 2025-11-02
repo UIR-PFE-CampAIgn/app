@@ -4,7 +4,7 @@ export interface Campaign {
     template_id: string;
     name: string;
     schedule_type: 'immediate' | 'scheduled' | 'recurring';
-    scheduled_at?: string;
+    scheduled_at?: string; // UTC ISO string from backend
     cron_expression?: string;
     target_leads: string[];
     status: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed';
@@ -31,7 +31,7 @@ export interface Campaign {
     template_id: string;
     name: string;
     schedule_type: 'immediate' | 'scheduled' | 'recurring';
-    scheduled_at?: string;
+    scheduled_at?: string | Date; // Can accept both from form
     cron_expression?: string;
     target_leads: string[];
     lead_data?: Record<string, never>[];

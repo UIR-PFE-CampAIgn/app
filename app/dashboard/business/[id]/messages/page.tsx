@@ -12,6 +12,7 @@ import {
 import { useChats } from "@/lib/hooks/use-chats";
 import { useChatMessages } from "@/lib/hooks/use-chat-messages";
 import { Chat, Message } from "@/lib/types/chat";
+import { useBusiness } from "@/app/contexts/BusinessContext";
 
 // Helper function to get score styling
 const getScoreStyling = (score?: string) => {
@@ -48,6 +49,8 @@ const getScoreStyling = (score?: string) => {
 };
 
 export default function InboxPage() {
+  const { businessId } = useBusiness();
+
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("open");
@@ -61,12 +64,12 @@ export default function InboxPage() {
   // Fetch chats on mount and when filters change
   useEffect(() => {
     fetchChats({
-      businessId: 'default-business',
+      businessId: businessId || undefined,
       status: statusFilter === 'all' ? undefined : statusFilter,
       search: searchTerm || undefined,
       limit: 50,
     });
-  }, [fetchChats, statusFilter,searchTerm]);
+  }, [fetchChats, statusFilter, searchTerm, businessId]);
 
   // Fetch messages when chat is selected
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function InboxPage() {
     const timer = setTimeout(() => {
       if (searchTerm) {
         fetchChats({
-          businessId: 'default-business',
+          businessId: businessId || undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           search: searchTerm,
         });
@@ -88,7 +91,7 @@ export default function InboxPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, statusFilter, fetchChats]);
+  }, [searchTerm, statusFilter, fetchChats, businessId]);
 
   const filteredChats = chats;
 

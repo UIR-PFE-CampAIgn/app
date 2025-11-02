@@ -46,6 +46,7 @@ import { useCampaignDialog } from "@/lib/hooks/use-campaign-dialog";
 import { useTemplates } from "@/lib/hooks/use-templates";
 import { campaignService } from "@/lib/services/campaign.service";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useBusiness } from "@/app/contexts/BusinessContext";
 
 // Helper function to get score styling
 const getScoreStyling = (score: string) => {
@@ -82,6 +83,8 @@ const getScoreStyling = (score: string) => {
 };
 
 export default function CampaignsPage() {
+  const { businessId } = useBusiness();
+
   const {
     campaigns,
     loading,
@@ -89,9 +92,10 @@ export default function CampaignsPage() {
     fetchCampaigns,
     createCampaign,
     cancelCampaign,
-  } = useCampaigns();
+  } = useCampaigns(businessId);
 
   const { templates, fetchTemplates } = useTemplates();
+
   
   const {
     open: isCreateOpen,
@@ -113,12 +117,13 @@ export default function CampaignsPage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
 const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: string; name: string } | null>(null);
-  const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(selectedCampaignId);
+  const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(businessId,selectedCampaignId);
   // Load data on mount
   useEffect(() => {
+    if (!businessId) return; // Prevent calling APIs with null
     fetchCampaigns();
-    fetchTemplates();
-  }, [fetchCampaigns, fetchTemplates]);
+    fetchTemplates({ businessId });
+  }, [fetchCampaigns, fetchTemplates, businessId]);
 
   // Filter campaigns
   const filteredCampaigns = campaigns.filter((campaign) => {
@@ -318,7 +323,7 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
                 <div>
                   <p className="text-sm text-slate-600">Messages Sent</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {campaigns.reduce((sum, c) => sum + c.sent_count, 0)}
+                  {campaigns.reduce((sum, c) => sum + (c.sent_count ?? 0), 0)}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -334,10 +339,13 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
                 <div>
                   <p className="text-sm text-slate-600">Success Rate</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {campaigns.length > 0 
-                      ? Math.round((campaigns.reduce((sum, c) => sum + c.sent_count, 0) / 
-                          campaigns.reduce((sum, c) => sum + c.total_recipients, 0)) * 100) || 0
-                      : 0}%
+                  {campaigns.length > 0 
+  ? Math.round(
+      (campaigns.reduce((sum, c) => sum + (c.sent_count ?? 0), 0) /
+       campaigns.reduce((sum, c) => sum + (c.total_recipients ?? 0), 0)) * 100
+    ) || 0
+  : 0}%
+
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
