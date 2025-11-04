@@ -27,9 +27,10 @@ jobs:
                   path: ~/.npm
                   key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
-            - name: Install
+            - name: Install & Test (coverage)
               run: |
                   npm ci
+                  npm run test:ci   # must output coverage/lcov.info
 
             - name: SonarCloud Scan
               uses: SonarSource/sonarcloud-github-action@v2
