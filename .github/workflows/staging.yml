@@ -35,9 +35,11 @@ jobs:
               uses: SonarSource/sonarcloud-github-action@v2
               env:
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-                  SONAR_ORG: ${{ secrets.SONAR_ORG }}
-                  SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-                  SONAR_HOST_URL: ${{ env.SONAR_HOST }}
+              with:
+                  args: >
+                      -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+                      -Dsonar.organization=${{ secrets.SONAR_ORG }}
+                      -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
 
             - name: Wait for Quality Gate
               uses: SonarSource/sonarqube-quality-gate-action@master
