@@ -20,6 +20,12 @@ jobs:
               run: |
                   set -e
                   mkdir -p ~/.ssh
+                  echo $HOST
+                  echo $USER
+                  echo $KEY
+                  echo "HOST length: ${#HOST}"
+                  echo "USER length: ${#USER}"
+                  echo "KEY length: ${#KEY}"
                   echo "$KEY" > ~/.ssh/id_staging
                   chmod 600 ~/.ssh/id_staging
                   ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_staging "$USER@$HOST" 'echo "SSH OK: $(uname -a)"'
