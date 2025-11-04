@@ -41,14 +41,19 @@ jobs:
                       -Dsonar.organization=${{ secrets.SONAR_ORG }}
                       -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
 
+            - name: Check report file
+              run: |
+                  cat .scannerwork/report-task.txt
+
+            - name: Wait for SonarCloud processing
+              run: sleep 10
+
             - name: SonarCloud Quality Gate
               uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
               env:
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-                  SONAR_HOST_URL: https://sonarcloud.io
               with:
                   scanMetadataReportFile: .scannerwork/report-task.txt
-                  pollingTimeoutSec: 300
 
     build_and_deploy:
         needs: test_and_sonar
