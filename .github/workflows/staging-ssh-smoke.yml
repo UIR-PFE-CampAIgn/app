@@ -12,23 +12,37 @@ jobs:
                   echo "Target user: ${{ secrets.STAGING_USER }}"
 
             # Quick raw SSH check (helpful debug if the next step fails early)
-            - name: Raw SSH hello
+            - name: Raw SSH hello (sanitize + prove)
+              shell: bash
               env:
-                  HOST: ${{ secrets.STAGING_HOST }}
-                  USER: ${{ secrets.STAGING_USER }}
-                  KEY: ${{ secrets.STAGING_SSH_KEY }}
+                  HOST_RAW: ${{ secrets.STAGING_HOST }} # pure IP, per you
+                  USER_RAW: ${{ secrets.STAGING_USER }}
+                  KEY_RAW: ${{ secrets.STAGING_SSH_KEY }}
               run: |
-                  set -e
-                  mkdir -p ~/.ssh
-                  echo $HOST
-                  echo $USER
-                  echo $KEY
+                  set -euo pipefail
+
+                  # 1) Strip CR, trailing/leading whitespace, and zero-width chars from HOST/USER
+                  strip_zw() { perl -CSDA -pe 's/\x{200B}|\x{200C}|\x{200D}|\x{FEFF}//g'; }
+                  HOST="$(printf '%s' "$HOST_RAW" | tr -d '\r' | sed -e 's/^[[:space:]]\+//' -e 's/[[:space:]]\+$//' | strip_zw)"
+                  USER="$(printf '%s' "$USER_RAW" | tr -d '\r' | sed -e 's/^[[:space:]]\+//' -e 's/[[:space:]]\+$//' | strip_zw)"
+
+                  # 2) Show lengths and byte dump (safe: we don't print the value itself)
                   echo "HOST length: ${#HOST}"
                   echo "USER length: ${#USER}"
-                  echo "KEY length: ${#KEY}"
-                  echo "$KEY" > ~/.ssh/id_staging
+                  printf '%s' "$HOST" | od -An -t x1 | tr -s ' ' | sed 's/^/HOST bytes: /'
+                  # Expect only hex bytes for digits and dots (30-39 for 0-9, 2e for .)
+
+                  # 3) Validate shape: IPv4 (digits and dots only)
+                  if [[ ! "$HOST" =~ ^[0-9.]+$ ]]; then
+                  echo "STAGING_HOST contains unexpected characters; ensure it's only digits and dots."; exit 1
+                  fi
+
+                  # 4) Optional: ensure DNS isn’t used at all by passing an IP; ssh won't do DNS then.
+                  mkdir -p ~/.ssh
+                  printf '%s\n' "$KEY_RAW" > ~/.ssh/id_staging
                   chmod 600 ~/.ssh/id_staging
-                  ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_staging "$USER@$HOST" 'echo "SSH OK: $(uname -a)"'
+
+                  ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_staging "$USER@$HOST" 'echo "SSH OK: $(uname -a)"'
 
             # Use the SSH action for a few deeper checks
             - name: Deep checks (docker/caddy/opt path)
