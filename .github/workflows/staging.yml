@@ -40,6 +40,7 @@ jobs:
                       -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
                       -Dsonar.organization=${{ secrets.SONAR_ORG }}
                       -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
+                      -Dsonar.qualitygate.wait=true
 
             - name: Check report file
               run: |
