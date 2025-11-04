@@ -1,0 +1,75 @@
+name: Staging SSH Smoke Test
+on:
+    workflow_dispatch: {} # run manually from the Actions tab
+
+jobs:
+    ssh-smoke:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Print target (sanity)
+              run: |
+                  echo "Target host: ${{ secrets.STAGING_HOST }}"
+                  echo "Target user: ${{ secrets.STAGING_USER }}"
+
+            # Quick raw SSH check (helpful debug if the next step fails early)
+            - name: Raw SSH hello
+              env:
+                  HOST: ${{ secrets.STAGING_HOST }}
+                  USER: ${{ secrets.STAGING_USER }}
+                  KEY: ${{ secrets.STAGING_SSH_KEY }}
+              run: |
+                  set -e
+                  mkdir -p ~/.ssh
+                  echo "$KEY" > ~/.ssh/id_staging
+                  chmod 600 ~/.ssh/id_staging
+                  ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_staging "$USER@$HOST" 'echo "SSH OK: $(uname -a)"'
+
+            # Use the SSH action for a few deeper checks
+            - name: Deep checks (docker/caddy/opt path)
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.STAGING_HOST }}
+                  username: ${{ secrets.STAGING_USER }}
+                  key: ${{ secrets.STAGING_SSH_KEY }}
+                  script_stop: true
+                  command_timeout: 30m
+                  script: |
+                      set -euo pipefail
+
+                      echo "[whoami]"; whoami
+                      echo "[hostname]"; hostname
+
+                      echo "[docker version]"; docker --version
+                      echo "[docker compose version]"; docker compose version || true
+                      echo "[docker service status]"
+                      if command -v systemctl >/dev/null 2>&1; then
+                        systemctl is-active docker
+                      else
+                        echo "systemd not available (OK on some distros)"
+                      fi
+
+                      echo "[caddy version]"; caddy version || true
+                      echo "[caddy service status]"
+                      if command -v systemctl >/dev/null 2>&1; then
+                        systemctl is-active caddy
+                      fi
+
+                      echo "[/opt layout]"
+                      ls -la /opt/campaign-staging || (echo "/opt missing — deploy-opt.yml probably not run" && exit 1)
+                      ls -la /opt/campaign-staging/stack
+
+                      echo "[compose ps]"
+                      cd /opt/campaign-staging/stack
+                      docker compose ps || true
+
+                      echo "[health scripts]"
+                      if [[ -f healthcheck.sh ]]; then
+                        echo "Running local health check samples (may fail if envs/images not yet set)"
+                        bash healthcheck.sh web || true
+                        bash healthcheck.sh gateway || true
+                        bash healthcheck.sh ml || true
+                      else
+                        echo "healthcheck.sh not found (OK if not deployed yet)"
+                      fi
+
+                      echo "✅ SSH smoke checks completed"
