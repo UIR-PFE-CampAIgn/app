@@ -81,7 +81,6 @@ export default function BusinessSettingsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  
   const { business, loading, error, refetch } = useBusiness(id);
   const { updateBusiness, deleteBusiness } = useBusinesses();
   
@@ -98,6 +97,7 @@ export default function BusinessSettingsPage() {
       email: "",
       phone: "",
       address: "",
+      website:"",
     },
   });
 
@@ -111,6 +111,7 @@ export default function BusinessSettingsPage() {
         email: business.email || "",
         phone: business.phone || "",
         address: business.address || "",
+        website:business.website || "",
       });
     }
     console.log(business,"bssisisi")
@@ -323,6 +324,27 @@ export default function BusinessSettingsPage() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Website
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            placeholder="http://example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                    ></FormField>
+                  
 
                   <FormField
                     control={form.control}
