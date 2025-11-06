@@ -31,6 +31,18 @@ jobs:
               run: |
                   npm ci
 
+            - name: Debug Sonar secrets
+              run: |
+                  set -e
+                  for var in SONAR_PROJECT_KEY SONAR_ORG SONAR_TOKEN; do
+                      value="${!var:-}"
+                      echo "$var length: ${#value}"
+                  done
+              env:
+                  SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+                  SONAR_ORG: ${{ secrets.SONAR_ORG }}
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
             - name: SonarCloud Scan
               uses: SonarSource/sonarcloud-github-action@v2
               env:
