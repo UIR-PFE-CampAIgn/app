@@ -22,6 +22,7 @@ import {
   Users,
   LayoutTemplate,
   ArrowLeft,
+  Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from '@/app/contexts/UserContext';
@@ -50,12 +51,14 @@ export function Dashboard() {
       ],
     },
     {
-      title: "Campaign Management",
+      title: "Business Management",
       items: [
         { title: "Campaigns", href: `${base}/campaigns`, icon: Zap },
         { title: "Messages", href: `${base}/messages`, icon: MessageSquare },
         { title: "Leads", href: `${base}/leads`, icon: Users },
         { title: "Templates", href: `${base}/templates`, icon: LayoutTemplate },
+        { title: "Business Details ", href: `${base}/BuisnessManagement`, icon: Briefcase },
+
       ],
     },
     {
