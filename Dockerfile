@@ -1,9 +1,9 @@
 FROM node:20-bookworm-slim AS base
 ENV NODE_ENV=production
 
-# Install system deps needed by Next.js (e.g. sharp/libvips)
+# Install system deps needed by Next.js (e.g. sharp/libvips) and tooling like git for Husky hooks
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates openssl libc6 \
+    && apt-get install -y --no-install-recommends ca-certificates openssl libc6 git \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
