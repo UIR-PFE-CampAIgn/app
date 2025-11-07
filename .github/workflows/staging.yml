@@ -8,6 +8,8 @@ env:
     REGISTRY: ghcr.io
     ORG: UIR-PFE-CampAIgn
     SONAR_HOST_URL: https://sonarcloud.io
+    # Allow temporarily bypassing Sonar when SKIP_SONAR repo variable is set to "true"
+    SKIP_SONAR: ${{ vars.SKIP_SONAR || 'false' }}
 
 concurrency:
     group: staging-${{ github.repository }}
@@ -31,19 +33,8 @@ jobs:
               run: |
                   npm ci
 
-            - name: Debug Sonar secrets
-              run: |
-                  set -e
-                  for var in SONAR_PROJECT_KEY SONAR_ORG SONAR_TOKEN; do
-                      value="${!var:-}"
-                      echo "$var length: ${#value}"
-                  done
-              env:
-                  SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-                  SONAR_ORG: ${{ secrets.SONAR_ORG }}
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
             - name: SonarCloud Scan
+              if: env.SKIP_SONAR != 'true'
               uses: SonarSource/sonarcloud-github-action@v2
               env:
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
