@@ -9,7 +9,7 @@ env:
     ORG: UIR-PFE-CampAIgn
     SONAR_HOST_URL: https://sonarcloud.io
     # Allow temporarily bypassing Sonar when SKIP_SONAR repo variable is set to "true"
-    SKIP_SONAR: ${{ vars.SKIP_SONAR || 'false' }}
+    SKIP_SONAR: true
 
 concurrency:
     group: staging-${{ github.repository }}
