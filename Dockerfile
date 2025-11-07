@@ -10,6 +10,8 @@ FROM base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+# Skip Husky hooks when installing inside CI/container
+ENV HUSKY=0
 RUN npm ci
 
 FROM deps AS builder
