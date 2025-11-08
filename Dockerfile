@@ -35,8 +35,8 @@ ENV HOST=0.0.0.0 \
 # Only what we need to run
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-# COPY --from=builder /app/public ./public
-# COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
 # Copy configs if your start script needs them
 COPY --from=builder /app/next.config.* ./ 
 COPY --from=builder /app/tailwind.config.* ./
