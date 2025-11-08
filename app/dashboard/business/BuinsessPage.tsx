@@ -16,6 +16,7 @@ import { Building2, Plus, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useBusinesses } from "@/lib/hooks/useBusinesses";
 import { useBusinessDialog } from "@/lib/hooks/use-business-dialog";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -72,7 +73,7 @@ export default function BusinessesPage() {
     refetch,
     createBusiness,
   } = useBusinesses();
-
+  const router = useRouter();
   const {
     isCreateOpen,
     openCreate,
@@ -105,6 +106,9 @@ export default function BusinessesPage() {
         closeDialogs();
         form.reset(defaultBusinessFormValues);
         toast.success("Business created successfully");
+        // Show WhatsApp integration
+        router.push(`/dashboard/business/whatsapp-setup?businessId=${result._id}&businessName=${encodeURIComponent(result.name)}`);
+
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create business");
