@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { usePathname } from "next/navigation";
 import {
@@ -22,10 +22,10 @@ import {
   Users,
   LayoutTemplate,
   ArrowLeft,
-  Briefcase
+  Briefcase,
 } from "lucide-react";
 import Link from "next/link";
-import { useUser } from '@/app/contexts/UserContext';
+import { useUser } from "@/app/contexts/UserContext";
 
 export function Dashboard() {
   const pathname = usePathname();
@@ -34,54 +34,69 @@ export function Dashboard() {
   // Extract business ID from pathname if exists
   const businessMatch = pathname.match(/\/dashboard\/business\/([^\/]+)/);
   const businessId = businessMatch ? businessMatch[1] : null;
-  const base = businessId ? `/dashboard/business/${businessId}` : '';
+  const base = businessId ? `/dashboard/business/${businessId}` : "";
 
   // Determine which navigation to show
-  const navigation = businessId ? [
-    {
-      title: "Back",
-      items: [
-        { title: "All Businesses", href: "/dashboard/business", icon: ArrowLeft },
-      ],
-    },
-    {
-      title: "Overview",
-      items: [
-        { title: "Overview", href: base, icon: LayoutDashboard },
-      ],
-    },
-    {
-      title: "Business Management",
-      items: [
-        { title: "Campaigns", href: `${base}/campaigns`, icon: Zap },
-        { title: "Messages", href: `${base}/messages`, icon: MessageSquare },
-        { title: "Leads", href: `${base}/leads`, icon: Users },
-        { title: "Templates", href: `${base}/templates`, icon: LayoutTemplate },
-        { title: "Business Details ", href: `${base}/BuisnessManagement`, icon: Briefcase },
-
-      ],
-    },
-    {
-      title: "Settings",
-      items: [
-        { title: "Settings", href: "/dashboard/settings", icon: Settings },
-      ],
-    },
-  ] : [
-    {
-      title: "Overview",
-      items: [
-        { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { title: "Businesses", href: "/dashboard/business", icon: Building2 },
-      ],
-    },
-    {
-      title: "Settings",
-      items: [
-        { title: "Settings", href: "/dashboard/settings", icon: Settings },
-      ],
-    },
-  ];
+  const navigation = businessId
+    ? [
+        {
+          title: "Back",
+          items: [
+            {
+              title: "All Businesses",
+              href: "/dashboard/business",
+              icon: ArrowLeft,
+            },
+          ],
+        },
+        {
+          title: "Overview",
+          items: [{ title: "Overview", href: base, icon: LayoutDashboard }],
+        },
+        {
+          title: "Business Management",
+          items: [
+            { title: "Chats", href: `${base}/messages`, icon: MessageSquare },
+            { title: "Leads", href: `${base}/leads`, icon: Users },
+            {
+              title: "Message Templates",
+              href: `${base}/templates`,
+              icon: LayoutTemplate,
+            },
+            { title: "Campaigns", href: `${base}/campaigns`, icon: Zap },
+            {
+              title: "Business Details",
+              href: `${base}/BuisnessManagement`,
+              icon: Briefcase,
+            },
+          ],
+        },
+        {
+          title: "Settings",
+          items: [
+            { title: "Settings", href: "/dashboard/settings", icon: Settings },
+          ],
+        },
+      ]
+    : [
+        {
+          title: "Overview",
+          items: [
+            { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+            {
+              title: "Businesses",
+              href: "/dashboard/business",
+              icon: Building2,
+            },
+          ],
+        },
+        {
+          title: "Settings",
+          items: [
+            { title: "Settings", href: "/dashboard/settings", icon: Settings },
+          ],
+        },
+      ];
 
   return (
     <Sidebar>
@@ -91,9 +106,7 @@ export function Dashboard() {
             C
           </div>
           <div>
-            <h2 className="font-semibold text-sidebar-foreground">
-              CampAIgn
-            </h2>
+            <h2 className="font-semibold text-sidebar-foreground">CampAIgn</h2>
             <p className="text-xs text-sidebar-foreground/60">
               Marketing Automation
             </p>
@@ -125,7 +138,8 @@ export function Dashboard() {
         {user ? (
           <div className="flex items-center gap-3 px-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground font-medium text-sm">
-              {user.appUserData.fullname?.[0] || user.supabaseUser.email[0].toUpperCase()}
+              {user.appUserData.fullname?.[0] ||
+                user.supabaseUser.email[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
