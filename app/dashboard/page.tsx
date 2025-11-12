@@ -34,7 +34,7 @@ import {
 } from "recharts";
 
 import { Button } from "@/components/ui/button";
-import { BarChart3, MessageSquare, Users, TrendingUp } from "lucide-react";
+import { BarChart3, MessageSquare, Users, TrendingUp ,Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useBusinesses } from "@/lib/hooks/useBusinesses";
 import { useDashboardStats } from "@/lib/hooks/useDashboardStats";
@@ -168,18 +168,20 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <button
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                  onClick={handleCreateCampaign}
-                >
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">Create New Campaign</p>
-                    <p className="text-xs text-muted-foreground">
-                      Launch a WhatsApp campaign
-                    </p>
-                  </div>
-                </button>
+              <button
+  className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
+  onClick={handleCreateCampaign}
+>
+  <div className="flex items-center gap-2">
+    <Sparkles className="h-5 w-5 text-purple-500 group-hover:animate-pulse" />
+  </div>
+  <div>
+    <p className="text-sm font-medium">Create Campaign</p>
+    <p className="text-xs text-muted-foreground">
+      <span className="font-semibold text-purple-600">AI-assisted</span> or manual creation
+    </p>
+  </div>
+</button>
                 <button
                   className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-left"
                   onClick={handleAddBusiness}
