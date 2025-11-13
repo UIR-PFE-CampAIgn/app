@@ -1,6 +1,6 @@
 // campaigns.api.ts
 import { apiClient } from './axios-instance';
-import { Campaign, CampaignLog, CreateCampaignDto, CampaignStats } from '@/lib/types/campaign';
+import { Campaign, CampaignLog, CreateCampaignDto, CampaignStats, GenerateCampaignRequest, GenerateCampaignResponse, CreateGeneratedCampaignDto } from '@/lib/types/campaign';
 
 export const campaignsApi = {
   async getAll(params: { businessId: string; status?: string }) {
@@ -32,4 +32,22 @@ export const campaignsApi = {
     const response = await apiClient.get<CampaignStats>('/campaigns/stats', { params: { businessId } });
     return response.data;
   },
+  async generateCampaign(data: GenerateCampaignRequest) {
+    const response = await apiClient.post<GenerateCampaignResponse>(
+      "campaigns/generate-campaign",
+      {
+        ...data,
+        timezone: data.timezone ?? "UTC",
+      }
+    );
+    return response.data;
+  },
+  async createGenerated(data: CreateGeneratedCampaignDto & { businessId: string }) {
+    const response = await apiClient.post<Campaign>(
+      `/campaigns/${data.businessId}/generated`,
+      data
+    );
+    return response.data;
+  },
+  
 };

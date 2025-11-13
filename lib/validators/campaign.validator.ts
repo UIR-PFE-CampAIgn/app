@@ -131,8 +131,27 @@ export const campaignSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
 });
+export const campaignGenerateFormSchema = z.object({
+  prompt: z
+    .string()
+    .min(10, "Prompt must be at least 10 characters")
+    .max(1000, "Prompt must not exceed 1000 characters"),
+  businessId: z.string().min(1, "Business is required"),
+  name: z.string().min(1, "Campaign name is required"), // <-- add this
+  timezone: z.string().optional().default("UTC"),
+});
 
+
+export const defaultCampaignGenerateFormValues: CampaignGenerateFormValues = {
+  prompt: "",
+  businessId: "",
+  timezone: "UTC",
+  name: "", 
+
+};
 // Type exports
+export type CampaignGenerateFormValues = z.infer<typeof campaignGenerateFormSchema>;
+
 export const campaignsListSchema = z.array(campaignSchema);
 export type Campaign = z.infer<typeof campaignSchema>;
 export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;

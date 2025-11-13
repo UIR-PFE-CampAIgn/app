@@ -23,6 +23,7 @@ import {
   LayoutTemplate,
   ArrowLeft,
   Briefcase,
+  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/app/contexts/UserContext";
@@ -68,6 +69,11 @@ export function Dashboard() {
               title: "Business Details",
               href: `${base}/BuisnessManagement`,
               icon: Briefcase,
+            },
+            {
+              title: "Campaign generator",
+              href: `${base}/campaing-generator`,
+              icon: Sparkles,
             },
           ],
         },

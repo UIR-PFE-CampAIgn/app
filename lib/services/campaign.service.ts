@@ -1,5 +1,5 @@
 import { campaignsApi } from '@/lib/api/campaigns';
-import { Campaign, CampaignLog, CreateCampaignDto, CampaignStats } from '@/lib/types/campaign';
+import { Campaign, CampaignLog, CreateCampaignDto, CampaignStats, GenerateCampaignRequest, GenerateCampaignResponse, CreateGeneratedCampaignDto } from '@/lib/types/campaign';
 import { createCampaignSchema, CreateCampaignInput } from '@/lib/validators/campaign.validator';
 import { ZodError } from 'zod';
 
@@ -120,6 +120,33 @@ class CampaignService {
     
     return `Every day at ${localHour.toString().padStart(2, '0')}:${minute}`;
   }
+  async generateCampaign(
+    data: GenerateCampaignRequest
+  ): Promise<GenerateCampaignResponse> {
+    try {
+      return await campaignsApi.generateCampaign(data);
+    } catch (error) {
+      console.error("Campaign generation failed:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to generate campaign"
+      );
+    }
+  }
+  async createGenerated(
+    businessId: string,
+    data: CreateGeneratedCampaignDto
+  ): Promise<Campaign> {
+    if (!data.message_content) throw new Error("Message content is required");
+  
+    const payload = {
+      ...data,
+      businessId,
+      scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString() : undefined,
+    };
+  
+    return campaignsApi.createGenerated(payload);
+  }
+  
 }
 
 export const campaignService = new CampaignService();

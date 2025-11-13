@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter ,useParams} from "next/navigation";
 import {
   Card,
   CardContent,
@@ -40,6 +41,10 @@ import {
   Star,
   Flame,
   Snowflake,
+  Sparkles,
+  FileText,
+  ArrowRight,
+  Zap,
 } from "lucide-react";
 import { useCampaigns, useCampaignLogs } from "@/lib/hooks/use-campaigns";
 import { useCampaignDialog } from "@/lib/hooks/use-campaign-dialog";
@@ -83,6 +88,7 @@ const getScoreStyling = (score: string) => {
 };
 
 export default function CampaignsPage() {
+  const router = useRouter();
   const { businessId } = useBusiness();
 
   const {
@@ -116,11 +122,18 @@ export default function CampaignsPage() {
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
-const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: string; name: string } | null>(null);
+  const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: string; name: string } | null>(null);
+  const params = useParams();
+  const id = params.id as string;
+
+  // New state for two-step modal
+  const [creationStep, setCreationStep] = useState<1 | 2>(1);
+  
   const { logs, loading: logsLoading, fetchLogs } = useCampaignLogs(businessId,selectedCampaignId);
+  
   // Load data on mount
   useEffect(() => {
-    if (!businessId) return; // Prevent calling APIs with null
+    if (!businessId) return;
     fetchCampaigns();
     fetchTemplates({ businessId });
   }, [fetchCampaigns, fetchTemplates, businessId]);
@@ -165,6 +178,7 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
       const dto = prepareDto();
       await createCampaign(dto);
       setIsCreateOpen(false);
+      setCreationStep(1);
       reset();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to create campaign');
@@ -182,6 +196,28 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
     }
   };
   
+  const handleCreateClick = () => {
+    setCreationStep(1);
+    setIsCreateOpen(true);
+  };
+
+  const handleAIGeneration = () => {
+    setIsCreateOpen(false);
+    setCreationStep(1);
+    router.push(`/dashboard/business/${id}/campaing-generator`); // Update with your AI generation page route
+  };
+
+  const handleManualCreation = () => {
+    setCreationStep(2);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsCreateOpen(open);
+    if (!open) {
+      setCreationStep(1);
+      reset();
+    }
+  };
 
   const viewLogs = async (campaignId: string) => {
     setSelectedCampaignId(campaignId);
@@ -232,7 +268,7 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
               </p>
             </div>
             <Button
-              onClick={() => setIsCreateOpen(true)}
+              onClick={handleCreateClick}
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -488,7 +524,7 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
               <p className="text-slate-500 text-center max-w-sm mb-6">
                 Create your first broadcast campaign to reach your audience
               </p>
-              <Button onClick={() => setIsCreateOpen(true)}>
+              <Button onClick={handleCreateClick}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Campaign
               </Button>
@@ -496,188 +532,290 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
           </Card>
         )}
 
-        {/* Create Campaign Dialog */}
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        {/* Two-Step Create Campaign Dialog */}
+        <Dialog open={isCreateOpen} onOpenChange={handleDialogClose}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create Broadcast Campaign</DialogTitle>
-              <DialogDescription>
-                Schedule a message campaign to multiple recipients
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="campaign-name">Campaign Name</Label>
-                <Input
-                  id="campaign-name"
-                  placeholder="e.g., Holiday Promotion"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name}</p>
-                )}
-              </div>
+            {creationStep === 1 ? (
+              // Step 1: Choose Creation Method
+              <>
+                <DialogHeader>
+                  <DialogTitle>Create Campaign</DialogTitle>
+                  <DialogDescription>
+                    Choose how you&apos;d like to create your campaign
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-6">
+                  {/* AI Generation Option */}
+                  <Card 
+                    className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-purple-500 group"
+                    onClick={handleAIGeneration}
+                  >
+                    <CardContent className="p-6 text-center">
+                      <div className="h-16 w-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <Sparkles className="h-8 w-8 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                        AI Generation
+                      </h3>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Let AI create an optimized campaign for you automatically
+                      </p>
+                      <div className="flex flex-col gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-3 w-3 text-purple-500" />
+                          <span>Fast & Intelligent</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-3 w-3 text-purple-500" />
+                          <span>Optimized Content</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-3 w-3 text-purple-500" />
+                          <span>Best Practices</span>
+                        </div>
+                      </div>
+                      <Button 
+                        className="w-full mt-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        onClick={handleAIGeneration}
+                      >
+                        Generate with AI
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </CardContent>
+                  </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="template">Message Template</Label>
-                <Select
-                  value={formData.template_id}
-                  onValueChange={(value) => setFormData({ ...formData, template_id: value })}
-                >
-                  <SelectTrigger id="template">
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.template_id && (
-                  <p className="text-sm text-red-500">{errors.template_id}</p>
-                )}
-              </div>
+                  {/* Manual Creation Option */}
+                  <Card 
+                    className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-blue-500 group"
+                    onClick={handleManualCreation}
+                  >
+                    <CardContent className="p-6 text-center">
+                      <div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <FileText className="h-8 w-8 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                        Manual Creation
+                      </h3>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Create and configure your campaign step by step
+                      </p>
+                      <div className="flex flex-col gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-blue-500" />
+                          <span>Full Control</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-3 w-3 text-blue-500" />
+                          <span>Custom Targeting</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-3 w-3 text-blue-500" />
+                          <span>Flexible Scheduling</span>
+                        </div>
+                      </div>
+                      <Button 
+                        className="w-full mt-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                      >
+                        Create Manually
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="schedule-type">Schedule Type</Label>
-                <Select
-                  value={formData.schedule_type}
-                  onValueChange={(value: typeof formData.schedule_type) => setFormData({ ...formData, schedule_type: value })}
-                >
-                  <SelectTrigger id="schedule-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="immediate">Send Immediately</SelectItem>
-                    <SelectItem value="scheduled">Schedule for Later</SelectItem>
-                    <SelectItem value="recurring">Recurring</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.schedule_type === "scheduled" && (
-                <div className="grid grid-cols-2 gap-4">
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => handleDialogClose(false)}>
+                    Cancel
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              // Step 2: Manual Creation Form
+              <>
+                <DialogHeader>
+                  <DialogTitle>Create Broadcast Campaign</DialogTitle>
+                  <DialogDescription>
+                    Schedule a message campaign to multiple recipients
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
+                    <Label htmlFor="campaign-name">Campaign Name</Label>
                     <Input
-                      id="date"
-                      type="date"
-                      value={formData.scheduled_date}
-                      onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
-                      min={new Date().toISOString().split('T')[0]}
+                      id="campaign-name"
+                      placeholder="e.g., Holiday Promotion"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     />
+                    {errors.name && (
+                      <p className="text-sm text-red-500">{errors.name}</p>
+                    )}
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={formData.scheduled_time}
-                      onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-                    />
+                    <Label htmlFor="template">Message Template</Label>
+                    <Select
+                      value={formData.template_id}
+                      onValueChange={(value) => setFormData({ ...formData, template_id: value })}
+                    >
+                      <SelectTrigger id="template">
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.template_id && (
+                      <p className="text-sm text-red-500">{errors.template_id}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-type">Schedule Type</Label>
+                    <Select
+                      value={formData.schedule_type}
+                      onValueChange={(value: typeof formData.schedule_type) => setFormData({ ...formData, schedule_type: value })}
+                    >
+                      <SelectTrigger id="schedule-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="immediate">Send Immediately</SelectItem>
+                        <SelectItem value="scheduled">Schedule for Later</SelectItem>
+                        <SelectItem value="recurring">Recurring</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.schedule_type === "scheduled" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date">Date</Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={formData.scheduled_date}
+                          onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="time">Time</Label>
+                        <Input
+                          id="time"
+                          type="time"
+                          value={formData.scheduled_time}
+                          onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {errors.scheduled_date && (
+                    <p className="text-sm text-red-500">{errors.scheduled_date}</p>
+                  )}
+
+                  {/* Target Scores Section */}
+                  <div className="space-y-2">
+                    <Label>Target Lead Scores</Label>
+                    <p className="text-sm text-slate-500">
+                      Select which lead scores to target for this campaign
+                    </p>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      {['hot', 'warm', 'cold'].map((score) => {
+                        const scoreStyling = getScoreStyling(score);
+                        const ScoreIcon = scoreStyling.icon;
+                        const isSelected = formData.target_leads.includes(score as "hot" | "warm" | "cold");
+                        
+                        return (
+                          <div
+                            key={score}
+                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                              isSelected 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-slate-200 hover:bg-slate-50'
+                            }`}
+                            onClick={() => toggleScore(score as "hot" | "warm" | "cold")}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleScore(score as "hot" | "warm" | "cold")}
+                            />
+                            <div className="flex items-center gap-2">
+                              <ScoreIcon className="h-4 w-4" />
+                              <span className="font-medium text-sm capitalize">{score}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => selectAllScores(['hot', 'warm', 'cold'])}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearScores}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+
+                    {/* Selection Summary */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600">
+                        {formData.target_leads.length} score type(s) selected
+                      </span>
+                      {formData.target_leads.length > 0 && (
+                        <div className="flex gap-1">
+                          {formData.target_leads.map((score) => {
+                            const scoreStyling = getScoreStyling(score);
+                            const ScoreIcon = scoreStyling.icon;
+                            return (
+                              <Badge
+                                key={score}
+                                variant={scoreStyling.variant}
+                                className={`text-xs px-2 py-1 flex items-center gap-1 ${scoreStyling.className}`}
+                              >
+                                <ScoreIcon className="h-3 w-3" />
+                                {score}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {errors.target_leads && (
+                      <p className="text-sm text-red-500">{errors.target_leads}</p>
+                    )}
                   </div>
                 </div>
-              )}
-              {errors.scheduled_date && (
-                <p className="text-sm text-red-500">{errors.scheduled_date}</p>
-              )}
-
-              {/* Target Scores Section */}
-<div className="space-y-2">
-  <Label>Target Lead Scores</Label>
-  <p className="text-sm text-slate-500">
-    Select which lead scores to target for this campaign
-  </p>
-  
-  {/* Score Selection */}
-  <div className="grid grid-cols-3 gap-3">
-    {['hot', 'warm', 'cold'].map((score) => {
-      const scoreStyling = getScoreStyling(score);
-      const ScoreIcon = scoreStyling.icon;
-      const isSelected = formData.target_leads.includes(score as "hot" | "warm" | "cold");
-      
-      return (
-        <div
-          key={score}
-          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-            isSelected 
-              ? 'border-blue-500 bg-blue-50' 
-              : 'border-slate-200 hover:bg-slate-50'
-          }`}
-          onClick={() => toggleScore(score as "hot" | "warm" | "cold")}
-        >
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => toggleScore(score as "hot" | "warm" | "cold")}
-          />
-          <div className="flex items-center gap-2">
-            <ScoreIcon className="h-4 w-4" />
-            <span className="font-medium text-sm capitalize">{score}</span>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-
-  {/* Quick Actions */}
-  <div className="flex gap-2">
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => selectAllScores(['hot', 'warm', 'cold'])}
-    >
-      Select All
-    </Button>
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={clearScores}
-    >
-      Clear All
-    </Button>
-  </div>
-
-  {/* Selection Summary */}
-  <div className="flex items-center justify-between text-sm">
-    <span className="text-slate-600">
-      {formData.target_leads.length} score type(s) selected
-    </span>
-    {formData.target_leads.length > 0 && (
-      <div className="flex gap-1">
-        {formData.target_leads.map((score) => {
-          const scoreStyling = getScoreStyling(score);
-          const ScoreIcon = scoreStyling.icon;
-          return (
-            <Badge
-              key={score}
-              variant={scoreStyling.variant}
-              className={`text-xs px-2 py-1 flex items-center gap-1 ${scoreStyling.className}`}
-            >
-              <ScoreIcon className="h-3 w-3" />
-              {score}
-            </Badge>
-          );
-        })}
-      </div>
-    )}
-  </div>
-
-  {errors.target_leads && (
-    <p className="text-sm text-red-500">{errors.target_leads}</p>
-  )}
-</div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreate}>
-                Create Campaign
-              </Button>
-            </DialogFooter>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCreationStep(1)}>
+                    Back
+                  </Button>
+                  <Button variant="outline" onClick={() => handleDialogClose(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreate}>
+                    Create Campaign
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -736,29 +874,29 @@ const [selectedCancelCampaign, setSelectedCancelCampaign] = useState<{ id: strin
         </Dialog>
 
         {/* Cancel Campaign Confirmation Dialog */}
-<Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle>Cancel Campaign</DialogTitle>
-      <DialogDescription>
-        Are you sure you want to cancel the campaign{" "}
-        <span className="font-semibold text-slate-900">
-          “{selectedCancelCampaign?.name}”
-        </span>
-        ? This action cannot be undone.
-      </DialogDescription>
-    </DialogHeader>
+        <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Cancel Campaign</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to cancel the campaign{" "}
+                <span className="font-semibold text-slate-900">
+                  &quot;{selectedCancelCampaign?.name}&quot;
+                </span>
+                ? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
 
-    <DialogFooter className="mt-4">
-      <Button variant="outline" onClick={() => setIsCancelOpen(false)}>
-        Keep Campaign
-      </Button>
-      <Button variant="destructive" onClick={handleCancelConfirm}>
-        Yes, Cancel It
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setIsCancelOpen(false)}>
+                Keep Campaign
+              </Button>
+              <Button variant="destructive" onClick={handleCancelConfirm}>
+                Yes, Cancel It
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>
