@@ -75,6 +75,10 @@ jobs:
                   tags: |
                       ${{ steps.vars.outputs.image }}:develop
                       ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.sha_short }}
+                  build-args: |
+                      NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+                      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY }}
+                      NEXT_PUBLIC_GATEWAY_URL=${{ secrets.NEXT_PUBLIC_GATEWAY_URL }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
